@@ -4019,6 +4019,11 @@ fetch("data/data.json")
       // Compute the new tree layout.
       tree(root);
 
+      root.each(n => {
+        n.x += height / 2;
+        n.y += width / 2;
+      });
+
       let left = root;
       let right = root;
       root.eachBefore(node => {
