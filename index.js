@@ -1,16 +1,27 @@
-import { linkHorizontal, tree as d3tree, hierarchy, create, event } from "d3";
+import {
+  linkHorizontal,
+  tree as d3tree,
+  hierarchy,
+  create,
+  event,
+  zoom
+} from "d3";
 import { flextree } from "d3-flextree";
 
 const width = document.documentElement.clientWidth;
+const height = document.documentElement.clientHeight;
 const dx = 10;
 const dy = 159;
 const margin = { top: 10, right: 120, bottom: 10, left: 40 };
+let transform = { k: 1, x: 0, y: 0 };
 
 const diagonal = linkHorizontal()
   .x(d => d.y)
   .y(d => d.x);
 
-const tree = d3tree().nodeSize([dx, dy]);
+const tree = d3tree()
+  .size([height, width])
+  .nodeSize([dx, dy]);
 
 fetch("data/data.json")
   .then(r => r.json())
@@ -26,18 +37,36 @@ fetch("data/data.json")
     });
 
     const svg = create("svg")
-      .attr("viewBox", [-margin.left, -margin.top, width, dx])
+      .attr("viewBox", [0, 0, width, height])
+      .attr("width", "100%")
+      .attr("height", "100%")
       .style("font", "10px sans-serif")
       .style("user-select", "none");
 
-    const gLink = svg
+    const g = svg.append("g");
+
+    svg.call(
+      zoom()
+        .extent([
+          [0, 0],
+          [width, height]
+        ])
+        .scaleExtent([1, 8])
+        .on("zoom", zoomed)
+    );
+
+    function zoomed() {
+      g.attr("transform", event.transform);
+    }
+
+    const gLink = g
       .append("g")
       .attr("fill", "none")
       .attr("stroke", "#555")
       .attr("stroke-opacity", 0.4)
       .attr("stroke-width", 1.5);
 
-    const gNode = svg
+    const gNode = g
       .append("g")
       .attr("cursor", "pointer")
       .attr("pointer-events", "all");
@@ -57,12 +86,11 @@ fetch("data/data.json")
         if (node.x > right.x) right = node;
       });
 
-      const height = right.x - left.x + margin.top + margin.bottom;
+      //const height = right.x - left.x + margin.top + margin.bottom;
 
-      const transition = svg
+      const transition = g
         .transition()
         .duration(duration)
-        .attr("viewBox", [-margin.left, left.x - margin.top, width, height])
         .tween(
           "resize",
           window.ResizeObserver ? null : () => () => svg.dispatch("toggle")
