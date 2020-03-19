@@ -1,36 +1,76 @@
 import {
   linkHorizontal,
   tree as d3tree,
-  hierarchy,
   create,
   event,
   zoom
 } from "d3";
 import { flextree } from "d3-flextree";
+//import { LayoutEngine } from '@textkit/core';
+import textLayout from 'tex-linebreak';
+
+const { layoutItemsFromString, breakLines, positionItems } = textLayout;
 
 const width = document.documentElement.clientWidth;
 const height = document.documentElement.clientHeight;
 const dx = 10;
 const dy = 159;
-const margin = { top: 10, right: 120, bottom: 10, left: 40 };
-let transform = { k: 1, x: 0, y: 0 };
+
+const offscreenCanvas = document.createElement('canvas');
+const offscreenCtx = offscreenCanvas.getContext('2d');
+
+offscreenCanvas.width = offscreenCanvas.height = 5;
+
+function measureText(text, fontStyle) {
+  offscreenCtx.font = fontStyle;
+  return offscreenCtx.measureText(text).width;
+}
+
 
 const diagonal = linkHorizontal()
   .x(d => d.y)
   .y(d => d.x);
 
-const tree = d3tree()
-  .size([height, width])
-  .nodeSize([dx, dy]);
+const fontStyle = 'regular 12px Arial';
 
 fetch("data/data.json")
   .then(r => r.json())
   .then(data => {
-    const root = hierarchy(data);
+    console.log(data);
+    const layout = flextree({
+      children: d => d.children,
+      nodeSize: (d) => {
+        return [d.height, d.width];
+      }
+    });
+    const root = layout.hierarchy(data);
 
     root.x0 = dy / 2;
     root.y0 = 0;
     root.descendants().forEach((d, i) => {
+
+      const text = (d.data.content || '').replace(/<\/?p>/g, '');
+
+      const items = layoutItemsFromString(text || '', (t) => measureText(t, fontStyle));
+
+      // Find where to insert line-breaks in order to optimally lay out the text.
+      const lineWidth = 250;
+      const breakpoints = breakLines(items, lineWidth)
+
+      // Compute the (xOffset, line number) at which to draw each box item.
+      const positionedItems = positionItems(items, lineWidth, breakpoints);
+
+      const lines = [];
+      positionedItems.forEach(pi => {
+        const item = items[pi.item];
+        let line = lines[pi.line] || '';
+        line += item.text + ' ';
+        lines[pi.line] = line;
+      });
+
+      d.height = lines.length * 20;
+      d.width = lineWidth;
+
       d.id = i;
       d._children = d.children;
       if (d.depth && d.data.name.length !== 7) d.children = null;
@@ -51,7 +91,7 @@ fetch("data/data.json")
           [0, 0],
           [width, height]
         ])
-        .scaleExtent([1, 8])
+        .scaleExtent([0.1, 8])
         .on("zoom", zoomed)
     );
 
@@ -77,7 +117,7 @@ fetch("data/data.json")
       const links = root.links();
 
       // Compute the new tree layout.
-      tree(root);
+      layout(root);
 
       root.each(n => {
         n.x += height / 2;
@@ -131,9 +171,12 @@ fetch("data/data.json")
       nodeEnter
         .append("text")
         .attr("dy", "0.31em")
-        .attr("x", d => (d._children ? -6 : 6))
-        .attr("text-anchor", d => (d._children ? "end" : "start"))
-        .text(d => d.data.name)
+        .attr("x", 6)
+        .attr("text-anchor", 'start')
+        .text(d => {
+          console.log(d.data.name, d);
+          return d.children ? d.data.name : (d.data.name + d.data.content);
+        })
         .clone(true)
         .lower()
         .attr("stroke-linejoin", "round")

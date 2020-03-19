@@ -10,10 +10,12 @@ export default [
     output: {
       file: "dist/app.js",
       type: "iife",
+      sourcemap: true,
+      sourcemapFile: "dist/app.js.map",
       name
     },
     plugins: [
-      resolve(),
+      resolve({ preferBuiltins: true }),
       commonjs(),
       json(),
       process.env.ROLLUP_WATCH ? livereload() : null
