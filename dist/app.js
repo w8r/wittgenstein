@@ -1,5 +1,5 @@
 
-(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.head.appendChild(r) })(window.document);
+(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35700/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.head.appendChild(r) })(window.document);
 function ascending(a, b) {
   return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
@@ -4092,6 +4092,8 @@ function measureText(text, fontStyle) {
   return offscreenCtx.measureText(text).width;
 }
 
+const lineWidth = 250;
+
 
 const diagonal = linkHorizontal()
   .x(d => d.y)
@@ -4105,9 +4107,7 @@ fetch("data/data.json")
     console.log(data);
     const layout = flextree({
       children: d => d.children,
-      nodeSize: (d) => {
-        return [d.height, d.width];
-      }
+      nodeSize: (d) => [d.height, d.width]
     });
     const root = layout.hierarchy(data);
 
@@ -4120,7 +4120,7 @@ fetch("data/data.json")
       const items = layoutItemsFromString(text || '', (t) => measureText(t, fontStyle));
 
       // Find where to insert line-breaks in order to optimally lay out the text.
-      const lineWidth = 250;
+
       const breakpoints = breakLines(items, lineWidth);
 
       // Compute the (xOffset, line number) at which to draw each box item.
@@ -4134,8 +4134,10 @@ fetch("data/data.json")
         lines[pi.line] = line;
       });
 
-      d.height = lines.length * 20;
+      d._height = lines.length * 20;
+      d.height = 20;
       d.width = lineWidth;
+
 
       d.id = i;
       d._children = d.children;
@@ -4180,6 +4182,7 @@ fetch("data/data.json")
     function update(source) {
       const duration = event && event.altKey ? 2500 : 250;
       const nodes = root.descendants().reverse();
+      nodes.push(root);
       const links = root.links();
 
       // Compute the new tree layout.
@@ -4219,6 +4222,8 @@ fetch("data/data.json")
         .attr("stroke-opacity", 0)
         .on("click", d => {
           d.children = d.children ? null : d._children;
+          //d.width = d.height === d._height ? lineWidth400;
+          d.height = d.height === d._height ? 20 : d._height;
           update(d);
         });
 
@@ -4234,8 +4239,10 @@ fetch("data/data.json")
         .attr("x", 6)
         .attr("text-anchor", 'start')
         .text(d => {
-          console.log(d.data.name, d);
-          return d.children ? d.data.name : (d.data.name + d.data.content);
+          const { name, content } = d.data;
+          if (name === undefined) return;
+          console.log(d.data.name, content, d.children, d._children);
+          return d.children ? (name + content) : name || '';
         })
         .clone(true)
         .lower()

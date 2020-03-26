@@ -18,7 +18,7 @@ export default [
       resolve({ preferBuiltins: true }),
       commonjs(),
       json(),
-      process.env.ROLLUP_WATCH ? livereload() : null
+      process.env.ROLLUP_WATCH ? livereload({ port: 35700 }) : null
     ]
   }
 ];
