@@ -48,9 +48,7 @@ fetch("data/data.json")
     root.x0 = dy / 2;
     root.y0 = 0;
     root.descendants().forEach((d, i) => {
-
       const text = (d.data.content || '').replace(/<\/?p>/g, '');
-
       const items = layoutItemsFromString(text || '', (t) => measureText(t, fontStyle));
 
       // Find where to insert line-breaks in order to optimally lay out the text.
@@ -67,11 +65,11 @@ fetch("data/data.json")
         line += item.text + ' ';
         lines[pi.line] = line;
       });
+      d.data.lines = lines;
 
       d._height = lines.length * 20;
       d.height = 20;
       d.width = lineWidth;
-
 
       d.id = i;
       d._children = d.children;
@@ -115,9 +113,9 @@ fetch("data/data.json")
 
     function update(source) {
       const duration = event && event.altKey ? 2500 : 250;
-      const nodes = root.descendants().reverse();
-      nodes.push(root);
+      const nodes = root.descendants().reverse().concat([source]);
       const links = root.links();
+
 
       // Compute the new tree layout.
       layout(root);
@@ -126,21 +124,6 @@ fetch("data/data.json")
         n.x += height / 2;
         n.y += width / 2;
       });
-
-      const Q = [root];
-
-      while (Q.length !== 0) {
-        const node = Q.pop();
-      }
-
-      let left = root;
-      let right = root;
-      root.eachBefore(node => {
-        if (node.x < left.x) left = node;
-        if (node.x > right.x) right = node;
-      });
-
-      //const height = right.x - left.x + margin.top + margin.bottom;
 
       const transition = g
         .transition()
@@ -152,7 +135,6 @@ fetch("data/data.json")
 
       // Update the nodes…
       const node = gNode.selectAll("g").data(nodes, d => d.id);
-
       // Enter any new nodes at the parent's previous position.
       const nodeEnter = node
         .enter()
@@ -170,25 +152,39 @@ fetch("data/data.json")
       nodeEnter
         .append("circle")
         .attr("r", 2.5)
-        .attr("fill", d => (d._children ? "#555" : "#999"))
+        .attr("fill", d => (d._children ? "#444" : "#999"))
         .attr("stroke-width", 10);
 
-      nodeEnter
+      const text = nodeEnter
         .append("text")
         .attr("dy", "0.31em")
         .attr("x", 6)
         .attr("text-anchor", 'start')
         .text(d => {
-          const { name, content } = d.data;
+          const { name, content, lines } = d.data;
           if (name === undefined) return;
-          console.log(d.data.name, content, d.children, d._children);
-          return d.children ? (name + content) : name || '';
-        })
-        .clone(true)
+          return d.children ? (name + content) : name || null;
+        });
+
+      text.clone(true)
         .lower()
         .attr("stroke-linejoin", "round")
         .attr("stroke-width", 3)
         .attr("stroke", "white");
+
+      // nodeEnter.selectAll('text')
+      //   .enter()
+      //   .data(d => {console.log(d.data.lines);
+      //     return d.data.lines;
+      //   })
+      //   .append("tspan")
+      //   .text(d => {
+      //     console.log(d);
+      //      return d;
+      //   })
+      //   .attr("x", 20)
+      //   .attr("dx", 10)
+      //   .attr("dy", 22);
 
       // Transition nodes to their new position.
       const nodeUpdate = node
