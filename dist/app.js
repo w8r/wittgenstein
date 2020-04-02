@@ -4104,6 +4104,7 @@ const closedHeight = 20;
 fetch("data/data.json")
   .then(r => r.json())
   .then(data => {
+    data.name = '0';
     const layout = flextree({
       children: d => d.children,
       nodeSize: (d) => [d.height, d.width + 100]
@@ -4247,6 +4248,7 @@ fetch("data/data.json")
 
       const text = nodeEnter
         .append("text")
+        .attr('class', 'title')
         .attr("dy", "0.31em")
         .attr("x", 6)
         .attr("text-anchor", 'start')
@@ -4334,5 +4336,35 @@ fetch("data/data.json")
     update(root);
 
     document.body.appendChild(svg.node());
+
+    const controls = create('div')
+      .attr('class', 'controls');
+
+    document.body.appendChild(controls.node());
+
+    controls
+      .append('div')
+      .attr('class', 'link-control')
+      .text('expand all')
+      .on('click', () => {
+        root.each(n => {
+          n.children = n._children;
+          n.height = n._height;
+        });
+
+        update(root);
+      });
+
+    controls
+      .append('div')
+      .attr('class', 'link-control')
+      .text('collapse all')
+      .on('click', () => {
+        root.each(n => {
+          n.children = null;
+          n.height = closedHeight;
+        });
+        update(root);
+      });
   });
 //# sourceMappingURL=app.js.map

@@ -4,4 +4,27 @@ html {
   height: 100%;
   padding: 0;
   margin: 0;
+  font-family: 'Roboto Slab', serif;
+}
+
+.content, .title {
+  font-family: 'Roboto Slab', serif;
+}
+
+.controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+header {
+  position: absolute;
+  top: 10px;
+  left: 50px;
+}
+
+header h2 {
+  font-weight: 300;
 }
