@@ -4092,22 +4092,21 @@ function measureText(text, fontStyle) {
   return offscreenCtx.measureText(text).width;
 }
 
-const lineWidth = 250;
-
+const lineWidth = 200;
 
 const diagonal = linkHorizontal()
   .x(d => d.y)
   .y(d => d.x);
 
 const fontStyle = 'regular 12px Arial';
+const closedHeight = 20;
 
 fetch("data/data.json")
   .then(r => r.json())
   .then(data => {
-    console.log(data);
     const layout = flextree({
       children: d => d.children,
-      nodeSize: (d) => [d.height, d.width]
+      nodeSize: (d) => [d.height, d.width + 100]
     });
     const root = layout.hierarchy(data);
 
@@ -4133,13 +4132,14 @@ fetch("data/data.json")
       });
       d.data.lines = lines;
 
-      d._height = lines.length * 20;
-      d.height = 20;
+      d._height = lines.length * 22;
+      d.height = closedHeight;
       d.width = lineWidth;
 
       d.id = i;
       d._children = d.children;
       if (d.depth && d.data.name.length !== 7) d.children = null;
+      if (!d._children) d.leaf = true;
     });
 
     const svg = create("svg")
@@ -4179,16 +4179,53 @@ fetch("data/data.json")
 
     function update(source) {
       const duration = event && event.altKey ? 2500 : 250;
-      const nodes = root.descendants().reverse().concat([source]);
+      const nodes = root.descendants().reverse();
       const links = root.links();
 
+      const roots = gNode.selectAll("g").data([source], d => d.id);
+
+      if (source.height !== closedHeight) {
+        const text = roots
+          .append("text")
+          .attr('class', 'content')
+          .attr("y", -Math.floor(source.data.lines.length * 13.5 / 2 + 3))
+          .attr("x", 6)
+          .attr("text-anchor", 'start')
+          .html(d => {
+            const { name, content, lines } = d.data;
+            return lines.map(line => {
+              const offsetY = ((source.data.name || '').length + 2) * 8;
+              return `<tspan x="${offsetY}" dx="0" dy="12">${line}</tspan>`;
+            }).join('').trim();
+          });
+
+        // text.selectAll("tspan.text")
+        //   .data(d => {
+        //     console.log(d.data.lines);
+        //     return d.data.lines;
+        //   })
+        //   .enter()
+        //   .append("tspan")
+        //   .attr("class", "text")
+        //   .html(d => d)
+        //   .attr("x", ((source.data.name || '').length + 2) * 8)
+        //   .attr("dx", 0)
+        //   .attr("dy", 12);
+
+        text.clone(true).lower()
+          .attr("stroke-linejoin", "round")
+          .attr("stroke-width", 3)
+          .attr("stroke", "white");
+      } else {
+        roots.selectAll('.content').remove();
+      }
 
       // Compute the new tree layout.
       layout(root);
 
       root.each(n => {
         n.x += height / 2;
-        n.y += width / 2;
+        n.y += width / 10;
       });
 
       const transition = g
@@ -4211,7 +4248,7 @@ fetch("data/data.json")
         .on("click", d => {
           d.children = d.children ? null : d._children;
           //d.width = d.height === d._height ? lineWidth400;
-          d.height = d.height === d._height ? 20 : d._height;
+          d.height = d.height === d._height ? closedHeight : d._height;
           update(d);
         });
 
@@ -4226,31 +4263,13 @@ fetch("data/data.json")
         .attr("dy", "0.31em")
         .attr("x", 6)
         .attr("text-anchor", 'start')
-        .text(d => {
-          const { name, content, lines } = d.data;
-          if (name === undefined) return;
-          return d.children ? (name + content) : name || null;
-        });
+        .text(d => d.data.name);
 
       text.clone(true)
         .lower()
         .attr("stroke-linejoin", "round")
         .attr("stroke-width", 3)
         .attr("stroke", "white");
-
-      // nodeEnter.selectAll('text')
-      //   .enter()
-      //   .data(d => {console.log(d.data.lines);
-      //     return d.data.lines;
-      //   })
-      //   .append("tspan")
-      //   .text(d => {
-      //     console.log(d);
-      //      return d;
-      //   })
-      //   .attr("x", 20)
-      //   .attr("dx", 10)
-      //   .attr("dy", 22);
 
       // Transition nodes to their new position.
       const nodeUpdate = node
@@ -4276,6 +4295,7 @@ fetch("data/data.json")
       const linkEnter = link
         .enter()
         .append("path")
+        .attr('stroke-width', 0.5)
         .attr("d", d => {
           const o = { x: source.x0, y: source.y0 };
           return diagonal({ source: o, target: o });

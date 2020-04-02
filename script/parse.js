@@ -68,7 +68,7 @@ function tree(docs) {
 
           if (head && body) {
             node.name = getInnerHTML(head).match(/\d(\.\d+)?/)[0];
-            node.content = getInnerHTML(body).replace(/<\/?b>/, "").trim();
+            node.content = getInnerHTML(body).replace(/<\/?b>/g, "").trim();
           }
         });
         const parser = new Parser(contentHandler);
