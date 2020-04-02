@@ -19,6 +19,14 @@ html {
   cursor: pointer;
 }
 
+a, .link-control {
+  transition: color 0.3s linear;
+}
+
+a:hover, .link-control:hover {
+  color: #D16666;
+}
+
 header {
   position: absolute;
   top: 10px;
@@ -27,4 +35,8 @@ header {
 
 header h2 {
   font-weight: 300;
+}
+
+header h2 a {
+  color: black;
 }
