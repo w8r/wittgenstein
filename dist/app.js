@@ -4192,25 +4192,12 @@ fetch("data/data.json")
           .attr("x", 6)
           .attr("text-anchor", 'start')
           .html(d => {
-            const { name, content, lines } = d.data;
-            return lines.map(line => {
-              const offsetY = ((source.data.name || '').length + 2) * 8;
-              return `<tspan x="${offsetY}" dx="0" dy="12">${line}</tspan>`;
-            }).join('').trim();
+            const { lines } = d.data;
+            const offsetX = ((source.data.name || '').length + 2) * 8;
+            return lines.map(line => `
+              <tspan x="${offsetX}" dx="0" dy="12">${line}</tspan>
+            `).join('').trim();
           });
-
-        // text.selectAll("tspan.text")
-        //   .data(d => {
-        //     console.log(d.data.lines);
-        //     return d.data.lines;
-        //   })
-        //   .enter()
-        //   .append("tspan")
-        //   .attr("class", "text")
-        //   .html(d => d)
-        //   .attr("x", ((source.data.name || '').length + 2) * 8)
-        //   .attr("dx", 0)
-        //   .attr("dy", 12);
 
         text.clone(true).lower()
           .attr("stroke-linejoin", "round")
@@ -4267,6 +4254,26 @@ fetch("data/data.json")
 
       text.clone(true)
         .lower()
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-width", 3)
+        .attr("stroke", "white");
+
+      const text2 = nodeEnter
+        .append("text")
+        .attr('class', 'content')
+        .attr("y", d => -Math.floor(d.data.lines.length * 13.5 / 2 + 3))
+        .attr("x", 6)
+        .attr("text-anchor", 'start')
+        .html(d => {
+          const { lines, name } = d.data;
+          if (d.height === closedHeight) return null;
+          const offsetX = ((name || '').length + 2) * 8;
+          return lines.map(line => `
+              <tspan x="${offsetX}" dx="0" dy="12">${line}</tspan>
+            `).join('').trim();
+        });
+
+      text2.clone(true).lower()
         .attr("stroke-linejoin", "round")
         .attr("stroke-width", 3)
         .attr("stroke", "white");
