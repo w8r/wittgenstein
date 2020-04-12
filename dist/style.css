@@ -41,3 +41,11 @@ header h2 {
 header h2 a {
   color: black;
 }
+
+.icon {
+  fill: rgba(0,0,0,0.5);
+}
+
+.node:hover .icon {
+  fill: rgba(0,0,0,0.8);
+}

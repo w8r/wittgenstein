@@ -4,8 +4,8 @@ import {
   create,
   event,
   zoom
-} from "d3";
-import { flextree } from "d3-flextree";
+} from 'd3';
+import { flextree } from 'd3-flextree';
 //import { LayoutEngine } from '@textkit/core';
 import textLayout from 'tex-linebreak';
 
@@ -48,7 +48,7 @@ const diagonal = linkHorizontal()
 const fontStyle = 'regular 12px Arial';
 const closedHeight = 20;
 
-fetch("data/data.json")
+fetch('data/data.json')
   .then(r => r.json())
   .then(data => {
     data.name = '0';
@@ -61,7 +61,7 @@ fetch("data/data.json")
     root.x0 = dy / 2;
     root.y0 = 0;
     root.descendants().forEach((d, i) => {
-      const text = (d.data.content || '').replace(/<\/?p>/g, '');
+      const text = (d.data.content || '').replace(/<\/?[^>]+>/g, '');
       const items = layoutItemsFromString(text || '', (t) => measureText(t, fontStyle));
 
       // Find where to insert line-breaks in order to optimally lay out the text.
@@ -90,14 +90,36 @@ fetch("data/data.json")
       if (!d._children) d.leaf = true;
     });
 
-    const svg = create("svg")
-      .attr("viewBox", [0, 0, width, height])
-      .attr("width", "100%")
-      .attr("height", "100%")
-      .style("font", "10px sans-serif")
-      .style("user-select", "none");
+    const svg = create('svg')
+      .attr('viewBox', [0, 0, width, height])
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .style('font', '10px sans-serif')
+      .style('user-select', 'none');
 
-    const g = svg.append("g");
+    const filter = svg
+      .append('defs')
+      .append('filter')
+      .attr('id', 'whiteOutlineEffect');
+
+    filter
+      .append('feMorphology')
+      .attr('in', 'SourceAlpha')
+      .attr('result', 'MORPH')
+      .attr('operator', 'dilate')
+      .attr('radius', '2');
+    filter
+      .append('feColorMatrix')
+      .attr('in', 'MORPH')
+      .attr('result', 'WHITENED')
+      .attr('type', 'matrix')
+      .attr('values', '-1 0 0 1 0, 0 -1 0 1 0, 0 0 -1 1 0, 0 0 0 1 0');
+    const merge = filter
+      .append('feMerge');
+    merge.append('feMergeNode').attr('in', 'WHITENED');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    const g = svg.append('g');
 
     svg.call(
       zoom()
@@ -106,39 +128,40 @@ fetch("data/data.json")
           [width, height]
         ])
         .scaleExtent([0.1, 8])
-        .on("zoom", zoomed)
+        .on('zoom', zoomed)
     );
 
     function zoomed() {
-      g.attr("transform", event.transform);
+      g.attr('transform', event.transform);
     }
 
     const gLink = g
-      .append("g")
-      .attr("fill", "none")
-      .attr("stroke", "#555")
-      .attr("stroke-opacity", 0.4)
-      .attr("stroke-width", 1.5);
+      .append('g')
+      .attr('fill', 'none')
+      .attr('stroke', '#555')
+      .attr('stroke-opacity', 0.4)
+      .attr('stroke-width', 1.5);
 
     const gNode = g
-      .append("g")
-      .attr("cursor", "pointer")
-      .attr("pointer-events", "all");
+      .append('g')
+      .attr('cursor', 'pointer')
+      .attr('pointer-events', 'all');
 
     function update(source) {
       const duration = event && event.altKey ? 2500 : 250;
       const nodes = root.descendants().reverse();
       const links = root.links();
 
-      const roots = gNode.selectAll("g").data([source], d => d.id);
+      const roots = gNode.selectAll('g').data([source], d => d.id);
 
       if (source.height !== closedHeight) {
         const text = roots
-          .append("text")
+          .append('text')
           .attr('class', 'content')
-          .attr("y", -Math.floor(source.data.lines.length * 13.5 / 2 + 3))
-          .attr("x", 6)
-          .attr("text-anchor", 'start')
+          .attr('y', -Math.floor(source.data.lines.length * 13.5 / 2 + 3))
+          .attr('x', 6)
+          .attr('text-anchor', 'start')
+          //.attr('filter', 'url(#whiteOutlineEffect)')
           .html(d => {
             const { lines } = d.data;
             const offsetX = ((source.data.name || '').length + 2) * 8;
@@ -148,9 +171,9 @@ fetch("data/data.json")
           });
 
         text.clone(true).lower()
-          .attr("stroke-linejoin", "round")
-          .attr("stroke-width", 3)
-          .attr("stroke", "white");
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-width', 3)
+          .attr('stroke', 'white');
       } else {
         roots.selectAll('.content').remove();
       }
@@ -167,52 +190,65 @@ fetch("data/data.json")
         .transition()
         .duration(duration)
         .tween(
-          "resize",
-          window.ResizeObserver ? null : () => () => svg.dispatch("toggle")
+          'resize',
+          window.ResizeObserver ? null : () => () => svg.dispatch('toggle')
         );
 
       // Update the nodes…
-      const node = gNode.selectAll("g").data(nodes, d => d.id);
+      const node = gNode.selectAll('g.node').data(nodes, d => d.id);
       // Enter any new nodes at the parent's previous position.
       const nodeEnter = node
         .enter()
-        .append("g")
-        .attr("transform", d => `translate(${source.y0},${source.x0})`)
-        .attr("fill-opacity", 0)
-        .attr("stroke-opacity", 0)
-        .on("click", d => {
+        .append('g')
+        .attr('class', 'node')
+        .attr('id', d => `node-${d.data.name.replace(/\./g, '')}`)
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .attr('fill-opacity', 0)
+        .attr('stroke-opacity', 0)
+        .on('click', d => {
           d.children = d.children ? null : d._children;
           //d.width = d.height === d._height ? lineWidth400;
           d.height = d.height === d._height ? closedHeight : d._height;
           update(d);
         });
 
-      nodeEnter
-        .append("circle")
-        .attr("r", 2.5)
-        .attr("fill", d => (d._children ? "#444" : "#999"))
-        .attr("stroke-width", 10);
+      const icon = nodeEnter
+        .append('g')
+        .attr('transform', 'scale(0.5), translate(-12, -12)')
+        .attr('class', 'icon');
+
+      icon
+        .append('path')
+        .attr('d', 'M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm6 13h-5v5h-2v-5h-5v-2h5v-5h2v5h5v2z');
+
+      // icon
+      //   .append('circle')
+      //   .attr('r', 5)
+      //   .attr('fill', d => (d._children ? '#444' : '#999'))
+      //   .attr('stroke-width', 10);
 
       const text = nodeEnter
-        .append("text")
+        .append('text')
         .attr('class', 'title')
-        .attr("dy", "0.31em")
-        .attr("x", 6)
-        .attr("text-anchor", 'start')
+        .attr('dy', '0.31em')
+        .attr('x', 12)
+        .attr('text-anchor', 'start')
+        //.attr('filter', 'url(#whiteOutlineEffect)')
         .text(d => d.data.name);
 
-      text.clone(true)
-        .lower()
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-width", 3)
-        .attr("stroke", "white");
+      // text.clone(true)
+      //   .lower()
+      //   .attr('stroke-linejoin', 'round')
+      //   .attr('stroke-width', 3)
+      //   .attr('stroke', 'white');
 
       const text2 = nodeEnter
-        .append("text")
+        .append('text')
         .attr('class', 'content')
-        .attr("y", d => -Math.floor(d.data.lines.length * 13.5 / 2 + 3))
-        .attr("x", 6)
-        .attr("text-anchor", 'start')
+        .attr('y', d => -Math.floor(d.data.lines.length * 13.5 / 2 + 3))
+        .attr('x', 6)
+        .attr('text-anchor', 'start')
+        //.attr('filter', 'url(#whiteOutlineEffect)')
         .html(d => {
           const { lines, name } = d.data;
           if (d.height === closedHeight) return null;
@@ -222,37 +258,37 @@ fetch("data/data.json")
             `).join('').trim();
         });
 
-      text2.clone(true).lower()
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-width", 3)
-        .attr("stroke", "white");
+      // text2.clone(true).lower()
+      //   .attr('stroke-linejoin', 'round')
+      //   .attr('stroke-width', 3)
+      //   .attr('stroke', 'white');
 
       // Transition nodes to their new position.
       const nodeUpdate = node
         .merge(nodeEnter)
         .transition(transition)
-        .attr("transform", d => `translate(${d.y},${d.x})`)
-        .attr("fill-opacity", 1)
-        .attr("stroke-opacity", 1);
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('fill-opacity', 1)
+        .attr('stroke-opacity', 1);
 
       // Transition exiting nodes to the parent's new position.
       const nodeExit = node
         .exit()
         .transition(transition)
         .remove()
-        .attr("transform", d => `translate(${source.y},${source.x})`)
-        .attr("fill-opacity", 0)
-        .attr("stroke-opacity", 0);
+        .attr('transform', d => `translate(${source.y},${source.x})`)
+        .attr('fill-opacity', 0)
+        .attr('stroke-opacity', 0);
 
       // Update the links…
-      const link = gLink.selectAll("path").data(links, d => d.target.id);
+      const link = gLink.selectAll('path').data(links, d => d.target.id);
 
       // Enter any new links at the parent's previous position.
       const linkEnter = link
         .enter()
-        .append("path")
+        .append('path')
         .attr('stroke-width', 0.5)
-        .attr("d", d => {
+        .attr('d', d => {
           const o = { x: source.x0, y: source.y0 };
           return diagonal({ source: o, target: o });
         });
@@ -261,14 +297,14 @@ fetch("data/data.json")
       link
         .merge(linkEnter)
         .transition(transition)
-        .attr("d", diagonal);
+        .attr('d', diagonal);
 
       // Transition exiting nodes to the parent's new position.
       link
         .exit()
         .transition(transition)
         .remove()
-        .attr("d", d => {
+        .attr('d', d => {
           const o = { x: source.x, y: source.y };
           return diagonal({ source: o, target: o });
         });
