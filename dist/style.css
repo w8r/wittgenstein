@@ -49,3 +49,7 @@ header h2 a {
 .node:hover .icon {
   fill: rgba(0,0,0,0.8);
 }
+
+.hovered {
+  cursor: pointer;
+}

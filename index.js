@@ -3,7 +3,11 @@ import {
   tree as d3tree,
   create,
   event,
-  zoom
+  zoom,
+  zoomIdentity,
+  quadtree as d3Quadtree,
+  easeCubicInOut,
+  timer as d3Timer
 } from 'd3';
 import { flextree } from 'd3-flextree';
 //import { LayoutEngine } from '@textkit/core';
@@ -13,6 +17,8 @@ const { layoutItemsFromString, breakLines, positionItems } = textLayout;
 
 const width = document.documentElement.clientWidth;
 const height = document.documentElement.clientHeight;
+const dpx = devicePixelRatio;
+
 const dx = 10;
 const dy = 159;
 
@@ -28,25 +34,27 @@ function measureText(text, fontStyle) {
 
 const lineWidth = 200;
 
-function clicked(d) {
-  const [[x0, y0], [x1, y1]] = path.bounds(d);
-  d3.event.stopPropagation();
-  svg.transition().duration(750).call(
-    zoom.transform,
-    d3.zoomIdentity
-      .translate(width / 2, height / 2)
-      .scale(Math.min(8, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height)))
-      .translate(-(x0 + x1) / 2, -(y0 + y1) / 2),
-    d3.mouse(svg.node())
-  );
-}
+// function clicked(d) {
+//   const [[x0, y0], [x1, y1]] = path.bounds(d);
+//   d3.event.stopPropagation();
+//   svg.transition().duration(750).call(
+//     zoom.transform,
+//     d3.zoomIdentity
+//       .translate(width / 2, height / 2)
+//       .scale(Math.min(8, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height)))
+//       .translate(-(x0 + x1) / 2, -(y0 + y1) / 2),
+//     d3.mouse(svg.node())
+//   );
+// }
 
 const diagonal = linkHorizontal()
   .x(d => d.y)
   .y(d => d.x);
 
-const fontStyle = 'regular 12px Arial';
+const fontSize = 11;
+const fontStyle = `${fontSize}px 'Roboto Slab', serif`;
 const closedHeight = 20;
+let debug = false;
 
 fetch('data/data.json')
   .then(r => r.json())
@@ -57,6 +65,12 @@ fetch('data/data.json')
       nodeSize: (d) => [d.height, d.width + 100]
     });
     const root = layout.hierarchy(data);
+    root.each(n => {
+      n.x += height / 2;
+      n.y += width / 10;
+    });
+
+    let quadtree;
 
     root.x0 = dy / 2;
     root.y0 = 0;
@@ -90,6 +104,13 @@ fetch('data/data.json')
       if (!d._children) d.leaf = true;
     });
 
+    const canvas = create('canvas')
+      .attr('width', width * dpx)
+      .attr('height', height * dpx)
+      .style('width', width + 'px')
+      .style('height', height + 'px');
+    const ctx = canvas.node().getContext('2d');
+
     const svg = create('svg')
       .attr('viewBox', [0, 0, width, height])
       .attr('width', '100%')
@@ -120,6 +141,185 @@ fetch('data/data.json')
     merge.append('feMergeNode').attr('in', 'SourceGraphic');
 
     const g = svg.append('g');
+
+    canvas.call(
+      zoom()
+        .extent([[0, 0], [width, height]])
+        .scaleExtent([0.01, 100])
+        .on('zoom', () => zoomedCanvas(event.transform))
+    );
+
+    const transformation = zoomIdentity;
+    const viewBox = [0, 0, 0, 0];
+    function zoomedCanvas(transform) {
+      const { x, y, k } = transform;
+
+      transformation.x = x;
+      transformation.y = y;
+      transformation.k = k;
+
+      viewBox[0] = transformation.invertX(0);
+      viewBox[1] = transformation.invertY(0);
+      viewBox[2] = transformation.invertX(width);
+      viewBox[3] = transformation.invertY(height);
+
+      requestAnimationFrame(render);
+    }
+
+    function render() {
+      ctx.save();
+      ctx.clearRect(0, 0, width * dpx, height * dpx);
+      ctx.translate(transformation.x * dpx, transformation.y * dpx);
+      ctx.scale(transformation.k * dpx, transformation.k * dpx);
+
+      renderTree();
+
+      ctx.restore();
+    }
+
+    const curves = linkHorizontal()
+      .context(ctx)
+      // invert
+      .x(d => d.y)
+      .y(d => d.x);
+
+
+    let hoveredNode = null;
+    function renderTree() {
+
+      if (debug && quadtree) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'red'
+        ctx.lineWidth = 0.5;
+        quadtree.visit((n, x0, y0, x1, y1) => {
+          ctx.rect(x0, y0, x1 - x0, y1 - y0);
+        });
+        ctx.stroke();
+      }
+
+      // links
+      ctx.beginPath();
+      ctx.strokeStyle = '#555';
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 0.75;
+      root.links().forEach(curves);
+      ctx.stroke();
+      ctx.closePath();
+
+      const nodes = root.descendants();
+
+      // node circles
+      ctx.beginPath();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#777';
+      nodes.forEach(({ x, y }) => {
+        ctx.moveTo(y, x);
+        ctx.arc(y, x, 5, 0, 2 * Math.PI);
+      });
+      ctx.fill();
+
+      const visibleNodes = nodes.filter(({ x, y }) => {
+        return (x >= viewBox[1]
+          && x <= viewBox[3]
+          && y >= viewBox[0]
+          && y <= viewBox[2]);
+      });
+
+      ctx.beginPath();
+      ctx.font = fontStyle;
+      ctx.fillStyle = '#222';
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.textBaseline = 'middle';
+      const titleOffsetX = 10;
+
+      visibleNodes.forEach(({ data, x, y }) => {
+        ctx.strokeText(data.name, y + titleOffsetX, x + 1);
+        ctx.fillText(data.name, y + titleOffsetX, x + 1);
+      });
+
+      // texts
+      const textsHidden = transformation.k < 0.5;
+      ctx.beginPath();
+      ctx.lineWidth = 4;
+      ctx.fillStyle = textsHidden ? '#ddd' : '#222';
+      visibleNodes.forEach(({ data, x, y, children, height }) => {
+        const { lines, name } = data;
+
+        if (!children && height === closedHeight) return;
+
+        const offsetY = -Math.floor(lines.length / 2) * 11 + 5;
+        const offsetX = ((name || '').length + 2) * 8;
+        let dy = x + offsetY;
+        const dx = y + offsetX;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (textsHidden) {
+            ctx.rect(dx, dy - (fontSize / 2), 200, fontSize);
+          } else {
+            ctx.strokeText(line, dx, dy);
+            ctx.fillText(line, dx, dy);
+          }
+          dy += 12;
+        }
+        ctx.fill();
+      });
+
+      if (hoveredNode) {
+        ctx.beginPath();
+        ctx.moveTo(hoveredNode.y, hoveredNode.x);
+        ctx.arc(hoveredNode.y, hoveredNode.x, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        canvas.classed('hovered', true);
+      } else {
+        canvas.classed('hovered', false);
+      }
+    }
+
+    //const render = () => requestAnimationFrame(_render);
+
+    canvas
+      .on('mousemove', () => {
+        const x = transformation.invertX(event.x);
+        const y = transformation.invertY(event.y);
+        hoveredNode = quadtree.find(x, y, 5);
+        requestAnimationFrame(render);
+      })
+      .on('click', () => {
+        const x = transformation.invertX(event.x);
+        const y = transformation.invertY(event.y);
+        hoveredNode = quadtree.find(x, y, 5);
+        const d = hoveredNode;
+        if (d) {
+          d.children = d.children ? null : d._children;
+          //d.width = d.height === d._height ? lineWidth400;
+          d.height = d.height === d._height ? closedHeight : d._height;
+          update(d);
+
+          if (d.children) {
+            const x0 = d.x;
+            const y0 = d.y;
+            d.children.forEach(node => {
+              node.x0 = node.x;
+              node.y0 = node.y;
+            });
+
+            const t = d3Timer((elapsed) => {
+              if (elapsed > 250) t.stop();
+              else {
+                const ratio = easeCubicInOut(elapsed / 250);
+                d.children.forEach(node => {
+                  node.x = x0 + ratio * (node.x0 - x0);
+                  node.y = y0 + ratio * (node.y0 - y0);
+                });
+                render();
+              }
+            }, 150);
+          }
+        }
+      });
+
 
     svg.call(
       zoom()
@@ -180,11 +380,14 @@ fetch('data/data.json')
 
       // Compute the new tree layout.
       layout(root);
-
       root.each(n => {
         n.x += height / 2;
         n.y += width / 10;
       });
+
+      quadtree = d3Quadtree(nodes, d => d.y, d => d.x);
+
+
 
       const transition = g
         .transition()
@@ -221,57 +424,6 @@ fetch('data/data.json')
         .append('path')
         .attr('d', 'M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm6 13h-5v5h-2v-5h-5v-2h5v-5h2v5h5v2z');
 
-      // icon
-      //   .append('circle')
-      //   .attr('r', 5)
-      //   .attr('fill', d => (d._children ? '#444' : '#999'))
-      //   .attr('stroke-width', 10);
-
-      const text = nodeEnter
-        .append('text')
-        .attr('class', 'title')
-        .attr('dy', '0.31em')
-        .attr('x', 12)
-        .attr('text-anchor', 'start')
-        //.attr('filter', 'url(#whiteOutlineEffect)')
-        .text(d => d.data.name);
-
-      // text.clone(true)
-      //   .lower()
-      //   .attr('stroke-linejoin', 'round')
-      //   .attr('stroke-width', 3)
-      //   .attr('stroke', 'white');
-
-      const text2 = nodeEnter
-        .append('text')
-        .attr('class', 'content')
-        .attr('y', d => -Math.floor(d.data.lines.length * 13.5 / 2 + 3))
-        .attr('x', 6)
-        .attr('text-anchor', 'start')
-        //.attr('filter', 'url(#whiteOutlineEffect)')
-        .html(d => {
-          const { lines, name } = d.data;
-          if (d.height === closedHeight) return null;
-          const offsetX = ((name || '').length + 2) * 8;
-          return lines.map(line => `
-              <tspan x="${offsetX}" dx="0" dy="12">${line}</tspan>
-            `).join('').trim();
-        });
-
-      // text2.clone(true).lower()
-      //   .attr('stroke-linejoin', 'round')
-      //   .attr('stroke-width', 3)
-      //   .attr('stroke', 'white');
-
-      // Transition nodes to their new position.
-      const nodeUpdate = node
-        .merge(nodeEnter)
-        .transition(transition)
-        .attr('transform', d => `translate(${d.y},${d.x})`)
-        .attr('fill-opacity', 1)
-        .attr('stroke-opacity', 1);
-
-      // Transition exiting nodes to the parent's new position.
       const nodeExit = node
         .exit()
         .transition(transition)
@@ -280,45 +432,18 @@ fetch('data/data.json')
         .attr('fill-opacity', 0)
         .attr('stroke-opacity', 0);
 
-      // Update the links…
-      const link = gLink.selectAll('path').data(links, d => d.target.id);
-
-      // Enter any new links at the parent's previous position.
-      const linkEnter = link
-        .enter()
-        .append('path')
-        .attr('stroke-width', 0.5)
-        .attr('d', d => {
-          const o = { x: source.x0, y: source.y0 };
-          return diagonal({ source: o, target: o });
-        });
-
-      // Transition links to their new position.
-      link
-        .merge(linkEnter)
-        .transition(transition)
-        .attr('d', diagonal);
-
-      // Transition exiting nodes to the parent's new position.
-      link
-        .exit()
-        .transition(transition)
-        .remove()
-        .attr('d', d => {
-          const o = { x: source.x, y: source.y };
-          return diagonal({ source: o, target: o });
-        });
-
-      // Stash the old positions for transition.
       root.eachBefore(d => {
         d.x0 = d.x;
         d.y0 = d.y;
       });
+      //render();
     }
 
     update(root);
 
-    document.body.appendChild(svg.node());
+    //document.body.appendChild(svg.node());
+    document.body.appendChild(canvas.node());
+    zoomedCanvas(transformation);
 
     const controls = create('div')
       .attr('class', 'controls');
