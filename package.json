@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "rollup -c",
-    "start": "rollup -cw & serve"
+    "dev": "vite",
+    "build": "vite build"
   },
   "keywords": [],
   "author": "",
@@ -14,24 +14,18 @@
     "@manaflair/text-layout": "^0.11.0",
     "@textkit/core": "^0.1.17",
     "babel-runtime": "^6.26.0",
-    "d3": "^5.15.0",
-    "d3-flextree": "^2.1.1",
     "htmlparser2": "^4.1.0",
     "tex-linebreak": "^0.5.2"
   },
   "devDependencies": {
-    "@rollup/plugin-buble": "^0.21.1",
-    "@rollup/plugin-commonjs": "^11.0.2",
-    "@rollup/plugin-json": "^4.0.2",
-    "@rollup/plugin-node-resolve": "^7.1.1",
+    "@types/d3": "^7.4.0",
+    "@types/d3-flextree": "^2.1.1",
+    "d3": "^7.8.5",
+    "d3-flextree": "^2.1.2",
     "domhandler": "^3.0.0",
     "domutils": "^2.0.0",
     "node-html-parser": "^1.2.12",
-    "rollup": "^2.0.3",
-    "rollup-plugin-livereload": "^1.0.4",
-    "rollup-plugin-node-builtins": "^2.1.2",
-    "rollup-plugin-node-globals": "^1.4.0",
-    "rollup-plugin-terser": "^5.3.0",
-    "serve": "^11.3.0"
+    "typescript": "^5.1.6",
+    "vite": "^4.4.6"
   }
 }
