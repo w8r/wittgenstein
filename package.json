@@ -24,6 +24,7 @@
     "d3-flextree": "^2.1.2",
     "domhandler": "^3.0.0",
     "domutils": "^2.0.0",
+    "mathjax": "^3.2.2",
     "node-html-parser": "^1.2.12",
     "typescript": "^5.1.6",
     "vite": "^4.4.6"

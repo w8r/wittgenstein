@@ -13,6 +13,14 @@ import {
 import { measureText } from "./measure";
 import { linkHorizontal } from "d3";
 
+// TODO:
+// [x] - measurements
+// [x] - line breaks
+// [ ] - click expand / collapse
+// [ ] - animate expand / collapse
+// [ ] - text rendering
+// [ ] - hide texts that are too small or outside of the viewport
+
 let data: Datum;
 let root: FlextreeNode<Datum>;
 let hoveredNode: IndexData | undefined;
@@ -59,6 +67,15 @@ const index = (root: FlextreeNode<Datum>) => {
 };
 
 let currentTransform = d3Zoom.zoomIdentity;
+
+const project = (px: number, py: number) => {
+  const { x, y, k } = currentTransform;
+
+  return {
+    x: (pxRatio * px - pxRatio * x) / k,
+    y: (pxRatio * py - pxRatio * y) / k,
+  };
+};
 
 const requestRender = () =>
   render({
@@ -154,8 +171,10 @@ fetch("data/data.json")
     });
 
     root.each((d) => {
-      if (!d.data.open) d.data.height = 0;
-      else d.data.height = d.data._height;
+      if (!d.data.open) {
+        d.children = undefined;
+        d.data.height = 0;
+      } else d.data.height = d.data._height;
     });
     layout(root);
 
@@ -171,16 +190,45 @@ fetch("data/data.json")
 
     index(root);
 
-    canvas.addEventListener("mousemove", (evt) => {
-      // transform mouse position by current zoom transform
-      const t = currentTransform;
+    document.documentElement.addEventListener("mousemove", (evt) => {
+      pointer = project(evt.x, evt.y);
+      hoveredNode = Q.find(pointer.x, pointer.y, 5);
+      requestRender();
 
-      const ex = (pxRatio * evt.x - pxRatio * t.x) / t.k;
-      const ey = (pxRatio * evt.y - pxRatio * t.y) / t.k;
+      canvas.style.cursor = hoveredNode ? "pointer" : "default";
+    });
 
-      pointer = { x: ex, y: ey };
-
-      hoveredNode = Q.find(ex, ey, 15);
+    document.documentElement.addEventListener("click", (evt) => {
+      if (!hoveredNode) return;
+      const { node } = hoveredNode;
+      console.log("clicked", node);
+      if (!node.children) {
+        node.children = node.data.children;
+        console.log("opne", node.children);
+        node.children?.forEach((n) => {
+          n.data.open = true;
+          n.data.height = n.data._height;
+        });
+        node.data.open = true;
+        node.data.height = node.data._height;
+      }
+      // if (node.data.open) {
+      //   node.data.open = false;
+      //   node.children = undefined;
+      //   node.data.height = closedHeight;
+      //   node.data.width = lineWidth;
+      //   node.data._children = node.children;
+      //   openNodes.delete(node.data.id);
+      // } else {
+      //   node.data.open = true;
+      //   node.children = node.data._children;
+      //   node.data.height = node.data._height;
+      //   node.data.width = lineWidth;
+      //   node.data._children = node.children;
+      //   openNodes.add(node.data.id);
+      // }
+      layout(root);
+      index(root);
       requestRender();
     });
   });

@@ -14,6 +14,8 @@ interface Options {
   hoveredNode?: FlextreeNode<Datum>;
 }
 
+const MIN_FONT_SIZE = 8;
+
 export function initCanvas() {
   const screenWidth = document.documentElement.clientWidth;
   const screenHeight = document.documentElement.clientHeight;
@@ -113,6 +115,10 @@ export function render({
     if (!data.open) return;
     if (i++ > 40) return;
     // title
+    ctx.strokeStyle = "#fff";
+    ctx.fillStyle = "#000";
+    ctx.textBaseline = "middle";
+
     if (data.name) {
       const titleX = x + R * 2;
       const titleY = y;
@@ -121,16 +127,39 @@ export function render({
       ctx.fillText(data.name, titleX, titleY);
     }
 
-    // content
-    ctx.textBaseline = "middle";
     const offsetX = ((data.name || "").length + 2) * 7;
     const offsetY = -Math.floor(((data.lines.length - 1) * fontSize) / 2);
-    data.lines.forEach((line, i) => {
-      const lineX = offsetX + x;
-      const lineY = offsetY + y + i * fontSize;
-      ctx.strokeText(line, lineX, lineY);
-      ctx.fillText(line, lineX, lineY);
-    });
+
+    const scaledFontSize = fontSize * transform.k;
+
+    // text bg
+    if (scaledFontSize < MIN_FONT_SIZE) {
+      ctx.beginPath();
+      ctx.fillStyle = "#ccc";
+      data.lines.forEach((line, i) => {
+        // draw background rect
+        const lineX = offsetX + x;
+        const lineY = offsetY - (fontSize * 1.2) / 2 + y + i * fontSize;
+        const lineW = ctx.measureText(line).width;
+        const lineH = fontSize * 1.2;
+
+        ctx.fillRect(lineX, lineY, lineW, lineH);
+        ctx.strokeRect(lineX, lineY, lineW, lineH);
+      });
+      ctx.closePath();
+    }
+
+    if (scaledFontSize >= MIN_FONT_SIZE) {
+      // text - conditionally draw if font size is readable
+      ctx.beginPath();
+      ctx.fillStyle = "#000";
+      data.lines.forEach((line, i) => {
+        const lineX = offsetX + x;
+        const lineY = offsetY + y + i * fontSize;
+        ctx.strokeText(line, lineX, lineY);
+        ctx.fillText(line, lineX, lineY);
+      });
+    }
   });
   ctx.closePath();
 
