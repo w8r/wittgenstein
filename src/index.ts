@@ -77,7 +77,8 @@ const project = (px: number, py: number) => {
   };
 };
 
-const requestRender = () =>
+const requestRender = () => {
+  //console.time("render");
   render({
     ctx,
     width: w,
@@ -88,13 +89,15 @@ const requestRender = () =>
     pointer,
     hoveredNode: hoveredNode?.node,
   });
+  //console.timeEnd("render");
+};
 
 const onZoom = ({
   transform,
 }: d3Zoom.D3ZoomEvent<HTMLCanvasElement, unknown>) => {
   currentTransform = transform;
-  requestRender();
   index(root);
+  requestRender();
 };
 
 function update(
@@ -192,11 +195,12 @@ fetch("data/data.json")
     index(root);
 
     document.documentElement.addEventListener("mousemove", (evt) => {
-      pointer = project(evt.x, evt.y);
-      hoveredNode = Q.find(pointer.x, pointer.y, 5);
-      requestRender();
-
-      canvas.style.cursor = hoveredNode ? "pointer" : "default";
+      requestAnimationFrame(() => {
+        pointer = project(evt.x, evt.y);
+        requestRender();
+        hoveredNode = Q.find(pointer.x, pointer.y, 5);
+        canvas.style.cursor = hoveredNode ? "pointer" : "default";
+      });
     });
 
     document.documentElement.addEventListener("click", (evt) => {
@@ -205,7 +209,7 @@ fetch("data/data.json")
       console.log("clicked", node);
       if (!node.children) {
         node.children = node.data.children;
-        console.log("opne", node.children);
+        console.log("open", node.children);
         node.children?.forEach((n) => {
           n.data.open = true;
           n.data.height = n.data._height;

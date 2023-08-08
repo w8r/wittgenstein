@@ -55,8 +55,6 @@ export function render({
   pointer,
   hoveredNode,
 }: Options) {
-  const scale = transform.k;
-
   // get viewport bounding box from event.transform
   const padding = 20;
   const xMin = (padding - pxRatio * transform.x) / transform.k;
