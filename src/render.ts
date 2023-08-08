@@ -1,7 +1,7 @@
 import { ZoomTransform } from "d3-zoom";
 import { Datum } from "./types";
 import { FlextreeNode } from "d3-flextree";
-import { linkHorizontal, pointer } from "d3";
+import { linkHorizontal } from "d3";
 
 interface Options {
   ctx: CanvasRenderingContext2D;
@@ -55,10 +55,28 @@ export function render({
   pointer,
   hoveredNode,
 }: Options) {
+  const scale = transform.k;
+
+  // get viewport bounding box from event.transform
+  const padding = 20;
+  const xMin = (padding - pxRatio * transform.x) / transform.k;
+  const yMin = (padding - pxRatio * transform.y) / transform.k;
+  const xMax = (width - padding - pxRatio * transform.x) / transform.k;
+  const yMax = (height - padding - pxRatio * transform.y) / transform.k;
+
   ctx.save();
   ctx.clearRect(0, 0, width, height);
+
   ctx.translate(transform.x * pxRatio, transform.y * pxRatio);
   ctx.scale(transform.k, transform.k);
+
+  // draw viewport bounding box
+  // ctx.strokeStyle = "#f00";
+  // ctx.lineWidth = 10;
+  // ctx.beginPath();
+  // ctx.rect(xMin, yMin, xMax - xMin, yMax - yMin);
+  // ctx.stroke();
+  // ctx.closePath();
 
   // draw links
   ctx.strokeStyle = "rgba(0,0,0,0.5)";
@@ -69,6 +87,20 @@ export function render({
     if (link.source.data.open && link.target.data.open) drawLink(link);
   });
   ctx.stroke();
+
+  //ctx.beginPath();
+  data.eachBefore(({ x: y, y: x, data }) => {
+    //const { width, height, x: y0, y: x0 } = d;
+    // check if node is fully inside viewport, x and y are reversed
+    const x0 = x;
+    const y0 = y - data.height / 2;
+    const x1 = x0 + data.width + 100;
+    const y1 = y0 + data.height;
+    data.outside = x1 < xMin || x0 > xMax || y1 < yMin || y0 > yMax;
+    //ctx.rect(x, y - data.height / 2, data.width + 100, data.height);
+  });
+  // ctx.stroke();
+  // ctx.closePath();
 
   // draw nodes
   ctx.beginPath();
@@ -107,13 +139,11 @@ export function render({
   ctx.beginPath();
   ctx.font = fontStyle;
 
-  let i = 0;
   ctx.lineWidth = 3;
   ctx.strokeStyle = "#fff";
   ctx.fillStyle = "#000";
   data.eachBefore(({ data, x: y, y: x }) => {
-    if (!data.open) return;
-    if (i++ > 40) return;
+    if (!data.open || data.outside) return;
     // title
     ctx.strokeStyle = "#fff";
     ctx.fillStyle = "#000";
@@ -144,7 +174,6 @@ export function render({
         const lineH = fontSize * 1.2;
 
         ctx.fillRect(lineX, lineY, lineW, lineH);
-        ctx.strokeRect(lineX, lineY, lineW, lineH);
       });
       ctx.closePath();
     }

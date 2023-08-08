@@ -153,8 +153,9 @@ fetch("data/data.json")
 
       d.data.id = i;
       d.data._children = d.children;
-      d.data.open = false;
-      d.children = undefined;
+      d.data.open = true;
+      //d.children = undefined;
+      data.outside = false;
     });
     const openNodes = new Set<number>([root.data.id]);
     [root, ...root.data._children!].forEach((n) => {
@@ -172,8 +173,8 @@ fetch("data/data.json")
 
     root.each((d) => {
       if (!d.data.open) {
-        d.children = undefined;
-        d.data.height = 0;
+        //d.children = undefined;
+        //d.data.height = 0;
       } else d.data.height = d.data._height;
     });
     layout(root);

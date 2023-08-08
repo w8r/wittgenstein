@@ -16,4 +16,5 @@ export interface Datum {
   open: boolean;
   x: number;
   y: number;
+  outside: boolean;
 }
