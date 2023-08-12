@@ -42,8 +42,8 @@ const NODE_TEXT_OFFSET = 15;
 // const fontStyle = `${fontSize}px serif`;
 
 const diagonal = linkHorizontal<unknown, unknown, { x: number; y: number }>()
-  .x((d) => d.y)
-  .y((d) => d.x);
+  .x((d) => d.data.y)
+  .y((d) => d.data.x);
 
 export function render({
   ctx,
@@ -68,6 +68,19 @@ export function render({
   ctx.translate(transform.x * pxRatio, transform.y * pxRatio);
   ctx.scale(transform.k, transform.k);
 
+  //ctx.beginPath();
+  data.eachBefore(({ data }) => {
+    //const { width, height, x: y0, y: x0 } = d;
+    // check if node is fully inside viewport, x and y are reversed
+    const { x: y, y: x } = data;
+    const x0 = x;
+    const y0 = y - data.height / 2;
+    const x1 = x0 + data.width + 100;
+    const y1 = y0 + data.height;
+    data.outside = x1 < xMin || x0 > xMax || y1 < yMin || y0 > yMax;
+    //ctx.rect(x, y - data.height / 2, data.width + 100, data.height);
+  });
+
   // draw viewport bounding box
   // ctx.strokeStyle = "#f00";
   // ctx.lineWidth = 10;
@@ -86,23 +99,13 @@ export function render({
   });
   ctx.stroke();
 
-  //ctx.beginPath();
-  data.eachBefore(({ x: y, y: x, data }) => {
-    //const { width, height, x: y0, y: x0 } = d;
-    // check if node is fully inside viewport, x and y are reversed
-    const x0 = x;
-    const y0 = y - data.height / 2;
-    const x1 = x0 + data.width + 100;
-    const y1 = y0 + data.height;
-    data.outside = x1 < xMin || x0 > xMax || y1 < yMin || y0 > yMax;
-    //ctx.rect(x, y - data.height / 2, data.width + 100, data.height);
-  });
   // ctx.stroke();
   // ctx.closePath();
 
   // draw nodes
   ctx.beginPath();
-  data.eachBefore(({ x: y, y: x, data }) => {
+  data.eachBefore(({ data }) => {
+    const { x: y, y: x } = data;
     if (!data.open) return;
     ctx.moveTo(x + R, y);
     ctx.arc(x, y, R, 0, 2 * Math.PI, false);
@@ -113,9 +116,9 @@ export function render({
   if (hoveredNode) {
     ctx.beginPath();
     ctx.fillStyle = "#f00";
-    const { x: y, y: x } = hoveredNode;
-    ctx.moveTo(x + R, y);
-    ctx.arc(x, y, R, 0, 2 * Math.PI, false);
+    const { x: y, y: x } = hoveredNode.data;
+    ctx.moveTo(x + R * 2, y);
+    ctx.arc(x, y, R * 2, 0, 2 * Math.PI, false);
     ctx.fill();
     ctx.closePath();
   }
@@ -124,12 +127,11 @@ export function render({
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  data.eachBefore(({ x: y, y: x, data }) => {
+  data.eachBefore(({ data }) => {
+    const { x: y, y: x } = data;
     if (!data.open) return;
     ctx.moveTo(x + R, y);
     ctx.arc(x, y, R, 0, 2 * Math.PI, false);
-    data.x0 = x;
-    data.y0 = y;
   });
   ctx.closePath();
   ctx.stroke();
@@ -140,8 +142,9 @@ export function render({
   ctx.lineWidth = 3;
   ctx.strokeStyle = "#fff";
   ctx.fillStyle = "#000";
-  data.eachBefore(({ data, x: y, y: x }) => {
+  data.eachBefore(({ data }) => {
     if (!data.open || data.outside) return;
+    const { x: y, y: x } = data;
     // title
     ctx.strokeStyle = "#fff";
     ctx.fillStyle = "#000";

@@ -3,7 +3,7 @@ import * as d3Select from "d3-selection";
 import { render, initCanvas } from "./render";
 import "./index.css";
 import { Datum } from "./types";
-import { FlextreeLayout, FlextreeNode, flextree } from "d3-flextree";
+import { FlextreeNode, flextree } from "d3-flextree";
 import { quadtree } from "d3-quadtree";
 import {
   layoutItemsFromString,
@@ -11,13 +11,22 @@ import {
   positionItems,
 } from "tex-linebreak";
 import { measureText } from "./measure";
-import { linkHorizontal } from "d3";
 import { fontStyle } from "./const";
+import { animate } from "./animation";
+
+// add hidden fields to FlextreeNode
+
+declare module "d3-flextree" {
+  interface FlextreeNode<Datum> {
+    collapsedChildren: FlextreeNode<Datum>[];
+  }
+}
 
 // TODO:
 // [x] - measurements
 // [x] - line breaks
-// [ ] - click expand / collapse
+// [x] - line measurements caching
+// [x] - click expand / collapse
 // [ ] - animate expand / collapse
 // [ ] - text rendering
 // [ ] - hide texts that are too small or outside of the viewport
@@ -27,13 +36,9 @@ let root: FlextreeNode<Datum>;
 let hoveredNode: IndexData | undefined;
 const { canvas, ctx, w, h, pxRatio } = initCanvas();
 
-const closedHeight = 22;
+const closedHeight = 0;
 const lineWidth = 200;
-const diagonal = linkHorizontal<unknown, unknown, { x: number; y: number }>()
-  .x((d) => d.y)
-  .y((d) => d.x);
-
-const strokeColor = "#fff";
+const duration = 250;
 
 let pointer = { x: 0, y: 0 };
 
@@ -52,8 +57,8 @@ const index = (root: FlextreeNode<Datum>) => {
   root.each((n) => {
     nodes.push({
       id: n.data.id || 0,
-      x: n.y,
-      y: n.x,
+      x: n.data.y,
+      y: n.data.x,
       width: n.data.width,
       height: n.data._height,
       node: n,
@@ -100,25 +105,6 @@ const onZoom = ({
   index(root);
   requestRender();
 };
-
-function update(
-  node: FlextreeNode<Datum>,
-  root: FlextreeNode<Datum>,
-  layout: FlextreeLayout<Datum>
-) {
-  const nodes = root.descendants().reverse();
-  const links = root.links();
-
-  layout(root);
-
-  // initial offset
-  root.each((n) => {
-    n.data.x = n.x + h / 2;
-    n.data.y = n.y + w / 10;
-  });
-
-  // move closed nodes to their parents
-}
 
 fetch("data/data.json")
   .then((r) => r.json())
@@ -174,18 +160,18 @@ fetch("data/data.json")
 
     layout(root);
 
-    let i = 0;
-    root.eachBefore((n) => {
-      if (n.data.children) i++;
-    });
-
     root.each((d) => {
       if (!d.data.open) {
         //d.children = undefined;
         //d.data.height = 0;
       } else d.data.height = d.data._height;
     });
+
     layout(root);
+    root.each(({ data, x, y }) => {
+      data.x = x;
+      data.y = y;
+    });
 
     //update(root, root, layout);
 
@@ -201,44 +187,63 @@ fetch("data/data.json")
 
     document.documentElement.addEventListener("mousemove", (evt) => {
       requestAnimationFrame(() => {
+        const tolerance = 10;
         pointer = project(evt.x, evt.y);
         requestRender();
-        hoveredNode = Q.find(pointer.x, pointer.y, 5);
+        hoveredNode = Q.find(pointer.x, pointer.y + 5, tolerance);
+        if (
+          hoveredNode &&
+          Math.hypot(pointer.x - hoveredNode.x, pointer.y + 5 - hoveredNode.y) >
+            tolerance
+        )
+          hoveredNode = undefined;
         canvas.style.cursor = hoveredNode ? "pointer" : "default";
       });
     });
 
-    document.documentElement.addEventListener("click", (evt) => {
+    function update(node: FlextreeNode<Datum>) {
+      let collapse = !!node.children;
+      if (collapse) {
+        // collapse
+        node.eachAfter(({ data }) => {
+          data.height = closedHeight;
+        });
+        node.data.height = node.data._height;
+      } else {
+        // expand
+        node.children = node.collapsedChildren;
+        node.eachAfter(({ data }) => {
+          data.height = data._height;
+        });
+        //node.children = node.collapsedChildren;
+      }
+      root.each(({ data, x, y }) => {
+        data.x0 = x;
+        data.y0 = y;
+      });
+
+      layout(root);
+      // propagate coords for all the
+      animate(duration, (t) => {
+        root.eachAfter(({ data, x, y }) => {
+          data.x = data.x0 + (x - data.x0) * t;
+          data.y = data.y0 + (y - data.y0) * t;
+        });
+        requestRender();
+      }).then(() => {
+        if (collapse) {
+          node.collapsedChildren = node.children!;
+          node.children = undefined;
+        }
+        requestRender();
+        index(root);
+      });
+    }
+
+    document.documentElement.addEventListener("click", () => {
       if (!hoveredNode) return;
       const { node } = hoveredNode;
       console.log("clicked", node);
-      if (!node.children) {
-        node.children = node.data.children!;
-        console.log("open", node.children);
-        node.children?.forEach((n) => {
-          n.data.open = true;
-          n.data.height = n.data._height;
-        });
-        node.data.open = true;
-        node.data.height = node.data._height;
-      }
-      // if (node.data.open) {
-      //   node.data.open = false;
-      //   node.children = undefined;
-      //   node.data.height = closedHeight;
-      //   node.data.width = lineWidth;
-      //   node.data._children = node.children;
-      //   openNodes.delete(node.data.id);
-      // } else {
-      //   node.data.open = true;
-      //   node.children = node.data._children;
-      //   node.data.height = node.data._height;
-      //   node.data.width = lineWidth;
-      //   node.data._children = node.children;
-      //   openNodes.add(node.data.id);
-      // }
-      layout(root);
-      index(root);
-      requestRender();
+      update(node);
     });
   });
