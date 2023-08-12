@@ -12,6 +12,7 @@ import {
 } from "tex-linebreak";
 import { measureText } from "./measure";
 import { linkHorizontal } from "d3";
+import { fontStyle } from "./const";
 
 // TODO:
 // [x] - measurements
@@ -32,8 +33,6 @@ const diagonal = linkHorizontal<unknown, unknown, { x: number; y: number }>()
   .x((d) => d.y)
   .y((d) => d.x);
 
-const fontSize = 12;
-const fontStyle = `regular ${fontSize}px 'Roboto Slab', serif`;
 const strokeColor = "#fff";
 
 let pointer = { x: 0, y: 0 };
@@ -78,18 +77,20 @@ const project = (px: number, py: number) => {
 };
 
 const requestRender = () => {
-  //console.time("render");
-  render({
-    ctx,
-    width: w,
-    height: h,
-    transform: currentTransform,
-    pxRatio,
-    data: root,
-    pointer,
-    hoveredNode: hoveredNode?.node,
+  requestAnimationFrame(() => {
+    //console.time("render");
+    render({
+      ctx,
+      width: w,
+      height: h,
+      transform: currentTransform,
+      pxRatio,
+      data: root,
+      pointer,
+      hoveredNode: hoveredNode?.node,
+    });
+    //console.timeEnd("render");
   });
-  //console.timeEnd("render");
 };
 
 const onZoom = ({
@@ -149,6 +150,10 @@ fetch("data/data.json")
         line += item.text + " ";
         lines[pi.line] = line;
       });
+      // for the skeleton replacement
+      const lineWidths = lines.map((line) => measureText(line, fontStyle));
+
+      d.data.lineWidths = lineWidths;
       d.data.lines = lines;
       d.data._height = lines.length * 22;
       d.data.height = closedHeight;
@@ -208,7 +213,7 @@ fetch("data/data.json")
       const { node } = hoveredNode;
       console.log("clicked", node);
       if (!node.children) {
-        node.children = node.data.children;
+        node.children = node.data.children!;
         console.log("open", node.children);
         node.children?.forEach((n) => {
           n.data.open = true;

@@ -7,6 +7,7 @@ export interface Datum {
   name: string;
   content: string;
   lines: string[];
+  lineWidths: number[];
   x0: number;
   y0: number;
   _width: number;

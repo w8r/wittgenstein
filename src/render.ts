@@ -2,6 +2,7 @@ import { ZoomTransform } from "d3-zoom";
 import { Datum } from "./types";
 import { FlextreeNode } from "d3-flextree";
 import { linkHorizontal } from "d3";
+import { fontSize, fontStyle } from "./const";
 
 interface Options {
   ctx: CanvasRenderingContext2D;
@@ -37,8 +38,7 @@ export function initCanvas() {
 
 const R = 3;
 const NODE_TEXT_OFFSET = 15;
-const fontSize = 12;
-const fontStyle = `${fontSize}px 'Roboto Slab', serif`;
+
 // const fontStyle = `${fontSize}px serif`;
 
 const diagonal = linkHorizontal<unknown, unknown, { x: number; y: number }>()
@@ -168,7 +168,7 @@ export function render({
         // draw background rect
         const lineX = offsetX + x;
         const lineY = offsetY - (fontSize * 1.2) / 2 + y + i * fontSize;
-        const lineW = ctx.measureText(line).width;
+        const lineW = data.lineWidths[i];
         const lineH = fontSize * 1.2;
 
         ctx.fillRect(lineX, lineY, lineW, lineH);
