@@ -151,13 +151,19 @@ fetch("data/data.json")
       //d.children = undefined;
       data.outside = false;
     });
-    const openNodes = new Set<number>([root.data.id]);
+    layout(root);
     [root, ...root.data._children!].forEach((n) => {
-      n.data.open = true;
-      n.children = n.data._children;
-      openNodes.add(n.data.id);
+      if (n.data.name) {
+        n.descendants().forEach((d) => {
+          if (d === n) return;
+          console.log(d.data.name, d.children);
+          d.collapsedChildren = d.children!;
+          d.children = undefined; //n.data._children;
+        });
+        n.collapsedChildren = n.children!;
+        n.children = undefined; //n.data._children;
+      }
     });
-
     layout(root);
 
     root.each((d) => {
@@ -190,7 +196,7 @@ fetch("data/data.json")
         const tolerance = 10;
         pointer = project(evt.x, evt.y);
         requestRender();
-        hoveredNode = Q.find(pointer.x, pointer.y + 5, tolerance);
+        hoveredNode = Q.find(pointer.x, pointer.y + 5, 50);
         if (
           hoveredNode &&
           Math.hypot(pointer.x - hoveredNode.x, pointer.y + 5 - hoveredNode.y) >
