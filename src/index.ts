@@ -14,6 +14,20 @@ import { measureText } from "./measure";
 import { fontStyle } from "./const";
 import { animate } from "./animation";
 
+// array of 10 dark pastel colors
+const colors = [
+  "#4E79A7",
+  "#F28E2B",
+  "#E15759",
+  "#76B7B2",
+  "#59A14F",
+  "#EDC949",
+  "#AF7AA1",
+  "#FF9DA7",
+  "#9C755F",
+  "#BAB0AC",
+];
+
 // add hidden fields to FlextreeNode
 
 declare module "d3-flextree" {
@@ -35,6 +49,9 @@ let data: Datum;
 let root: FlextreeNode<Datum>;
 let hoveredNode: IndexData | undefined;
 const { canvas, ctx, w, h, pxRatio } = initCanvas();
+
+const width = document.documentElement.clientWidth;
+const height = document.documentElement.clientHeight;
 
 const closedHeight = 0;
 const lineWidth = 200;
@@ -156,7 +173,6 @@ fetch("data/data.json")
       if (n.data.name) {
         n.descendants().forEach((d) => {
           if (d === n) return;
-          console.log(d.data.name, d.children);
           d.collapsedChildren = d.children!;
           d.children = undefined; //n.data._children;
         });
@@ -174,6 +190,7 @@ fetch("data/data.json")
     });
 
     layout(root);
+
     root.each(({ data, x, y }) => {
       data.x = x;
       data.y = y;
@@ -184,12 +201,39 @@ fetch("data/data.json")
     const selection = d3Select.select<HTMLCanvasElement, null>(canvas);
     const zoom = d3Zoom
       .zoom<HTMLCanvasElement, null>()
-      .scaleExtent([0.001, 10])
+      .extent([
+        [0, 0],
+        [width, height],
+      ])
+      .scaleExtent([0.1, 10])
       .on("zoom", onZoom);
     selection.call(zoom);
-    selection.call(zoom.scaleTo, 0.1);
+
+    const zoomToBounds = (x0: number, y0: number, x1: number, y1: number) => {
+      console.log("zoom to bounds", x0, y0, x1, y1);
+      const tr = d3Zoom.zoomIdentity
+        .translate(width / 2, height / 2)
+        .scale(
+          Math.min(10, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height))
+        )
+        .translate(-(x0 + x1) / 2, 0);
+
+      zoom.transform(selection, tr);
+    };
+
+    const { x0, x1, y0, y1 } = getBounds(root);
+    zoomToBounds(x0, y0, x1, y1);
+
+    window.root = root;
+    window.zoomToBounds = zoomToBounds;
+    window.getBounds = () => getBounds(root);
 
     index(root);
+
+    window.fit = () => {
+      const { x0, x1, y0, y1 } = getBounds(root);
+      zoomToBounds(x0, y0, x1, y1);
+    };
 
     document.documentElement.addEventListener("mousemove", (evt) => {
       requestAnimationFrame(() => {
@@ -252,4 +296,53 @@ fetch("data/data.json")
       console.log("clicked", node);
       update(node);
     });
+    document
+      .getElementById("action-collapse")!
+      .addEventListener("click", () => {
+        root.each((d) => {
+          if (d.data.name) {
+            d.data.open = false;
+            d.children = undefined;
+          }
+        });
+        update(root);
+      });
+
+    document.getElementById("action-expand")!.addEventListener("click", () => {
+      const Q = [root];
+      while (Q.length) {
+        const node = Q.pop()!;
+        if (node.collapsedChildren) {
+          node.children = node.collapsedChildren;
+          node.data.height = node.data._height;
+          Q.push(...node.children);
+        }
+      }
+
+      root.each((d) => {
+        d.data.height = d.data._height;
+      });
+      update(root);
+    });
   });
+
+function getBounds(root: FlextreeNode<Datum>) {
+  let x0 = Infinity;
+  let x1 = -x0;
+  let y0 = x0;
+  let y1 = x1;
+  root.eachAfter((d) => {
+    const width = d.data.width;
+    const height = d.data.height;
+    const x = d.x;
+    const y = d.y;
+
+    // add to bounding box
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x + width);
+    y0 = Math.min(y0, y - height);
+    y1 = Math.max(y1, y);
+  });
+  const h = 0;
+  return { x0, x1, y0: y0 - h / 2, y1: y1 - h / 2 };
+}
