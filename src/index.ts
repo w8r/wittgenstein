@@ -124,7 +124,7 @@ const onZoom = ({
 };
 
 fetch("data/data.json")
-  .then((r) => r.json())
+  .then((response) => response.json())
   .then((response) => {
     data = response;
 
@@ -183,6 +183,8 @@ fetch("data/data.json")
     layout(root);
 
     root.each((d) => {
+      //d.x += width / 2;
+      //d.y += height / 2;
       if (!d.data.open) {
         //d.children = undefined;
         //d.data.height = 0;
@@ -223,10 +225,6 @@ fetch("data/data.json")
 
     const { x0, x1, y0, y1 } = getBounds(root);
     zoomToBounds(x0, y0, x1, y1);
-
-    window.root = root;
-    window.zoomToBounds = zoomToBounds;
-    window.getBounds = () => getBounds(root);
 
     index(root);
 
