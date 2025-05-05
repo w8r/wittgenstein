@@ -27,10 +27,13 @@
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.60",
+    "compare-versions": "^6.1.1",
     "domhandler": "^3.0.0",
     "domutils": "^2.0.0",
     "eventemitter3": "^5.0.1",
     "node-html-parser": "^1.2.12",
+    "semver-sort": "^1.0.0",
+    "tsx": "^4.19.4",
     "vite": "^6.3.5"
   }
 }
