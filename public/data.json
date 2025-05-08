@@ -1,0 +1,213 @@
+{
+  "id": "0",
+  "parentId": "-1",
+  "children": [
+    {
+      "id": "5",
+      "children": [
+        {
+          "id": "51",
+          "children": [
+            {
+              "id": "514",
+              "children": [
+                {
+                  "id": "5141",
+                  "children": [],
+                  "parentId": "514",
+                  "depth": 4,
+                  "width": 200,
+                  "height": 3,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.141",
+                    "content": "If $p$ follows from $q$ and $q$ from $p$ then they are\none and the same proposition.",
+                    "width": 200,
+                    "height": 3
+                  }
+                },
+                {
+                  "id": "5142",
+                  "children": [],
+                  "parentId": "514",
+                  "depth": 4,
+                  "width": 205,
+                  "height": 3,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.142",
+                    "content": "A tautology follows from all propositions: it\nsays nothing.",
+                    "width": 205,
+                    "height": 3
+                  }
+                },
+                {
+                  "id": "5143",
+                  "children": [],
+                  "parentId": "514",
+                  "depth": 4,
+                  "width": 200,
+                  "height": 18,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.143",
+                    "content": "Contradiction is something shared by propositions,\nwhich \\emph{no} proposition has in common with\nanother. Tautology is that which is shared by\nall propositions, which have nothing in common\nwith one another.\n\nContradiction vanishes so to speak outside,\ntautology inside all propositions.\n\nContradiction is the external limit of the propositions,\ntautology their substanceless centre.",
+                    "width": 200,
+                    "height": 18
+                  }
+                }
+              ],
+              "parentId": "51",
+              "depth": 3,
+              "width": 205,
+              "height": 5,
+              "collapsed": false,
+              "data": {
+                "id": "5.14",
+                "content": "If a proposition follows from another, then the\nlatter says more than the former, the former less\nthan the latter.",
+                "width": 205,
+                "height": 5
+              }
+            },
+            {
+              "id": "515",
+              "children": [
+                {
+                  "id": "5151",
+                  "children": [
+                    {
+                      "id": "51511",
+                      "children": [],
+                      "parentId": "5151",
+                      "depth": 5,
+                      "width": 200,
+                      "height": 3,
+                      "collapsed": false,
+                      "data": {
+                        "id": "5.1511",
+                        "content": "There is no special object peculiar to probability\npropositions.",
+                        "width": 200,
+                        "height": 3
+                      }
+                    }
+                  ],
+                  "parentId": "515",
+                  "depth": 4,
+                  "width": 200.00000000000003,
+                  "height": 13,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.151",
+                    "content": "Suppose in a schema like that above in No.~\\PropERef{5.101}\n$T_{r}$ is the number of the ``T'''s in the proposition\n$r$, $T_{rs}$ the number of those ``T'''s in\nthe proposition $s$, which stand in the same columns\nas ``T'''s of the proposition $r$; then the proposition\n$r$ gives to the proposition $s$ the probability\n$T_{rs} : T_{r}$.",
+                    "width": 200.00000000000003,
+                    "height": 13
+                  }
+                },
+                {
+                  "id": "5152",
+                  "children": [],
+                  "parentId": "515",
+                  "depth": 4,
+                  "width": 205,
+                  "height": 24,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.152",
+                    "content": "Propositions which have no truth-arguments\nin common with one another we call independent.\n\\enlargethispage{-3pt} % force next paragraph to the next page\n\nIndependent propositions (\\exempliGratia\\ any two elementary\npropositions) give to one another the probability~$\\frac{1}{2}$.\n\nIf $p$ follows from $q$, the proposition $q$ gives\nto the proposition $p$ the probability~1. The\ncertainty of logical conclusion is a limiting case\nof probability.\n\n(Application to tautology and contradiction.)",
+                    "width": 205,
+                    "height": 24
+                  }
+                },
+                {
+                  "id": "5153",
+                  "children": [],
+                  "parentId": "515",
+                  "depth": 4,
+                  "width": 200.00000000000003,
+                  "height": 6,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.153",
+                    "content": "A proposition is in itself neither probable nor\n% -----File: 113.png---\nimprobable. An event occurs or does not occur,\nthere is no middle course.",
+                    "width": 200.00000000000003,
+                    "height": 6
+                  }
+                },
+                {
+                  "id": "5154",
+                  "children": [],
+                  "parentId": "515",
+                  "depth": 4,
+                  "width": 205,
+                  "height": 44,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.154",
+                    "content": "In an urn there are equal numbers of white\nand black balls (and no others). I draw one\nball after another and put them back in the\nurn. Then I can determine by the experiment\nthat the numbers of the black and white balls\nwhich are drawn approximate as the drawing\ncontinues.\n\nSo \\emph{this} is not a mathematical fact.\n\nIf then, I say, It is equally probable that\nI should draw a white and a black ball, this\nmeans, All the circumstances known to me (including\nthe natural laws hypothetically assumed)\ngive to the occurrence of the one event no more\nprobability than to the occurrence of the other.\nThat is they give---as can easily be understood\nfrom the above explanations---to each the\nprobability~$\\frac{1}{2}$.\n\nWhat I can verify by the experiment is that\nthe occurrence of the two events is independent\nof the circumstances with which I have no closer\nacquaintance.",
+                    "width": 205,
+                    "height": 44
+                  }
+                },
+                {
+                  "id": "5155",
+                  "children": [],
+                  "parentId": "515",
+                  "depth": 4,
+                  "width": 200,
+                  "height": 6,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.155",
+                    "content": "The unit of the probability proposition is: The\ncircumstances---with which I am not further acquainted---give\nto the occurrence of a definite event\nsuch and such a degree of probability.",
+                    "width": 200,
+                    "height": 6
+                  }
+                },
+                {
+                  "id": "5156",
+                  "children": [],
+                  "parentId": "515",
+                  "depth": 4,
+                  "width": 205.00000000000003,
+                  "height": 25,
+                  "collapsed": false,
+                  "data": {
+                    "id": "5.156",
+                    "content": "Probability is a generalization.\n\nIt involves a general description of a propositional\nform. Only in default of certainty do we\nneed probability.\n\nIf we are not completely acquainted with a fact,\nbut know \\emph{something} about its form.\n\n(A proposition can, indeed, be an incomplete\npicture of a certain state of affairs, but it is always\n\\emph{a} complete picture.)\n% -----File: 115.png---\n\nThe probability proposition is, as it were, an\nextract from other propositions.",
+                    "width": 205.00000000000003,
+                    "height": 25
+                  }
+                }
+              ],
+              "parentId": "51",
+              "depth": 3,
+              "width": 204.99999999999997,
+              "height": 12,
+              "collapsed": false,
+              "data": {
+                "id": "5.15",
+                "content": "If $T_{r}$ is the number of the truth-grounds of the\nproposition ``$r$'', $T_{rs}$ the number of those truth-grounds\nof the proposition ``$s$'' which are at the\nsame time truth-grounds of ``$r$'', then we call the\nratio $T_{rs} : T_{r}$ the measure of the \\emph{probability} which\nthe proposition ``$r$'' gives to the proposition ``$s$''.",
+                "width": 204.99999999999997,
+                "height": 12
+              }
+            }
+          ],
+          "parentId": "5",
+          "depth": 2,
+          "width": 0,
+          "height": 0,
+          "collapsed": false
+        }
+      ],
+      "parentId": "0",
+      "depth": 1,
+      "width": 0,
+      "height": 0,
+      "collapsed": false
+    }
+  ],
+  "depth": 0,
+  "width": 0,
+  "height": 0,
+  "collapsed": false
+}

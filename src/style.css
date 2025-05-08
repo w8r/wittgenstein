@@ -4,12 +4,17 @@ html {
   height: 100%;
   padding: 0;
   margin: 0;
-  font-family: "Roboto Slab", serif;
+  font-family: 'Roboto Slab', serif;
+}
+
+#canvas {
+  width: 100vw;
+  height: 100vh;
 }
 
 .content,
 .title {
-  font-family: "Roboto Slab", serif;
+  font-family: 'Roboto Slab', serif;
 }
 
 .controls {

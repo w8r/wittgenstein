@@ -15,9 +15,9 @@
     "@textkit/core": "^0.1.17",
     "babel-runtime": "^6.26.0",
     "d3": "^5.15.0",
-    "d3-flextree": "^2.1.1",
+    "d3-flextree": "^2.1.2",
     "htmlparser2": "^4.1.0",
-    "tex-linebreak": "^0.5.2"
+    "tex-linebreak2": "0.8.4"
   },
   "prettier": {
     "semi": true,
@@ -26,6 +26,7 @@
     "tabWidth": 2
   },
   "devDependencies": {
+    "@types/d3-flextree": "^2.1.4",
     "@webgpu/types": "^0.1.60",
     "compare-versions": "^6.1.1",
     "domhandler": "^3.0.0",

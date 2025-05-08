@@ -1,6 +1,9 @@
+import { serializeTreeForGPU } from './buffers';
 import { Camera } from './camera';
+import { layout } from './layout';
 import { Mouse } from './mouse';
-import { Renderer } from './renderer';
+import { Renderer } from './renderer/canvas';
+import { Node } from './types';
 
 export class Viewer {
   private renderer!: Renderer;
@@ -8,6 +11,8 @@ export class Viewer {
   private mouse!: Mouse;
   private resizeObserver: ResizeObserver;
   private renderFrame: number = 0;
+
+  private tree!: Node;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.mouse = new Mouse(canvas, this.camera);
@@ -22,23 +27,31 @@ export class Viewer {
       }
     });
     this.resizeObserver.observe(canvas);
+    this.init();
   }
 
   requestRedraw = () => {
     if (this.renderFrame) {
       cancelAnimationFrame(this.renderFrame);
     }
-    this.renderFrame = requestAnimationFrame(() => {
-      this.render();
-    });
+    this.renderFrame = requestAnimationFrame(this.redraw);
   };
 
   async init() {
+    this.tree = (await fetch('data.json').then((response) =>
+      response.json()
+    )) as Node;
     if (Renderer.isSupported()) {
-      this.renderer = new Renderer(this.canvas, this.graphManager);
+      this.renderer = new Renderer(this.canvas);
       await this.renderer.init(
         this.camera.getViewProjMatrix(this.getAspectRatio())
       );
+    }
+    const root = layout(this.tree);
+    // Update renderer with the tree data
+    if (this.tree && this.renderer) {
+      const serializedData = serializeTreeForGPU(root);
+      this.renderer.upload(serializedData);
     }
     this.updateSize();
   }
@@ -60,10 +73,6 @@ export class Viewer {
   private getAspectRatio() {
     return this.canvas.width / this.canvas.height;
   }
-
-  private requestRedraw = () => {
-    this.renderFrame = requestAnimationFrame(this.redraw);
-  };
 
   private redraw = () => {
     const viewProj = this.camera.getViewProjMatrix(this.getAspectRatio());
