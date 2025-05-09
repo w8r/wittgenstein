@@ -42,11 +42,13 @@ export function serializeTreeForGPU(root: TreeNode): {
   const nodeData = new Float32Array(nodes.length * 12);
 
   nodes.forEach((node, i) => {
+    const { x, y, size } = node;
     const offset = i * 12;
-    nodeData[offset] = node.x!;
-    nodeData[offset + 1] = -node.y!;
-    nodeData[offset + 2] = node.size[0]!;
-    nodeData[offset + 3] = node.size[1]!;
+    // everythin is rotated 90ºCW
+    nodeData[offset] = y;
+    nodeData[offset + 1] = -x - size[0] / 2;
+    nodeData[offset + 2] = node.data.width!;
+    nodeData[offset + 3] = size[0]!;
     nodeData[offset + 4] = node.data.collapsed ? 1 : 0;
     nodeData[offset + 5] = 0; //node.text?.includes('$') ? 1 : 0; // Check for math formulas
     nodeData[offset + 6] = 0; // padding

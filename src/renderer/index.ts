@@ -1,5 +1,3 @@
-import { TreeNode } from '../types';
-
 import nodeFragmentShaderSrc from './node.frag.wgsl?raw';
 import nodeVertexShaderSrc from './node.vert.wgsl?raw';
 import linkFragmentShaderSrc from './link.frag.wgsl?raw';

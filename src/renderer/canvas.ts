@@ -17,39 +17,40 @@ export class Renderer extends BaseRenderer {
 
   // debug renderer for canvas2d
   draw() {
+    const canvasWidth = this.canvas.width;
+    const canvasHeight = this.canvas.height;
+
     // clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    console.log(this.view);
-
+    this.ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     this.ctx.save();
 
-    const w = this.canvas.width / 2;
-    const h = this.canvas.height / 2;
+    // Reset transform to identity
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    const matrix = this.view;
-    const a = matrix[0]; // 0.015750402584671974
-    const b = matrix[4]; // 0
-    const c = matrix[1]; // 0
-    const d = matrix[5]; // 0.01808168925344944
-    const e = (matrix[12] + 1) * w; // -0.1664758026599884
-    const f = (matrix[13] + 1) * h; // -0.2376861870288849
-    this.ctx.setTransform(a, b, c, d, e, f);
-    // set view matrix 4x4 view projection matrix
-    // this.ctx.setTransform(
-    //   this.view[0],
-    //   -this.view[1],
-    //   this.view[4],
-    //   this.view[5],
-    //   this.view[12],
-    //   this.view[13]
-    // );
-    this.ctx.scale(w, -h); // flip y-axis
-    //this.ctx.translate(0, -this.canvas.height); // translate to top left
+    // Move origin to center of canvas
+    this.ctx.translate(canvasWidth / 2, canvasHeight / 2);
+
+    // Scale to map -1 to +1 range to -canvasWidth/2 to +canvasWidth/2 (and similar for height)
+    // Also, flip Y axis because canvas Y is downwards.
+    this.ctx.scale(canvasWidth / 2, -canvasHeight / 2);
+
+    // Now, apply the view-projection matrix (assuming it transforms to -1 to +1 NDC space)
+    // The ctx.transform() method multiplies the current transformation matrix by the matrix described by:
+    // (a, b, c, d, e, f) which are m11, m12, m21, m22, dx, dy
+    // If this.view is column-major: [m0, m1, m2, m3,  m4, m5, m6, m7,  m8, m9, m10, m11,  m12, m13, m14, m15]
+    // m11 = view[0], m12 = view[1] (Y component of X-basis), m21 = view[4] (X component of Y-basis), m22 = view[5] (Y component of Y-basis), dx = view[12], dy = view[13]
+    this.ctx.transform(
+      this.view[0], // m11
+      this.view[1], // m12
+      this.view[4], // m21
+      this.view[5], // m22
+      this.view[12], // dx
+      this.view[13] // dy
+    );
+
     this.ctx.globalAlpha = 1.0;
     this.ctx.lineWidth = 1;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
+
     // draw nodes
     for (let i = 0; i < this.nodeCount; i++) {
       const offset = i * 12;

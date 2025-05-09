@@ -31,9 +31,9 @@ export class Mouse extends EventEmitter<{ update: [] }> {
 
   private setupEventHandlers() {
     this.canvas.addEventListener('mousedown', this.onMouseDown);
-    this.canvas.addEventListener('mousemove', this.onMouseMove);
-    this.canvas.addEventListener('mouseup', this.onMouseUp);
-    this.canvas.addEventListener('mouseleave', this.onMouseUp);
+    window.addEventListener('mousemove', this.onMouseMove);
+    window.addEventListener('mouseup', this.onMouseUp);
+    //this.canvas.addEventListener('mouseleave', this.onMouseUp);
     this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
   }
 
