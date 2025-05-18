@@ -1,5 +1,6 @@
 import { FlextreeNode } from 'd3-flextree';
 import { Node } from './types';
+import { LAYER_GAP, LINK_STRIDE, NODE_STRIDE } from './constants';
 
 type TreeNode = FlextreeNode<Node>;
 
@@ -39,12 +40,12 @@ export function serializeTreeForGPU(root: TreeNode): {
 
   // Create node buffer
   // Format: [x, y, width, height, isCollapsed, hasFormula, padding1, padding2, r, g, b, a] × nodeCount
-  const nodeData = new Float32Array(nodes.length * 12);
+  const nodeData = new Float32Array(nodes.length * NODE_STRIDE);
 
   nodes.forEach((node, i) => {
     const { x, y, size } = node;
-    const offset = i * 12;
-    // everythin is rotated 90ºCW
+    const offset = i * NODE_STRIDE;
+    // everything is rotated 90ºCW
     nodeData[offset] = y;
     nodeData[offset + 1] = -x - size[0] / 2;
     nodeData[offset + 2] = node.data.width!;
@@ -64,22 +65,24 @@ export function serializeTreeForGPU(root: TreeNode): {
 
   // Create link buffer
   // Format: [sourceX, sourceY, targetX, targetY, controlPoint1X, controlPoint1Y, controlPoint2X, controlPoint2Y, r, g, b, a] × linkCount
-  const linkData = new Float32Array(links.length * 12);
+  const linkData = new Float32Array(links.length * LINK_STRIDE);
 
-  links.forEach((link, i) => {
-    const offset = i * 12;
+  console.log('Link data:', links);
+
+  links.forEach(({ source, target }, i) => {
+    const offset = i * LINK_STRIDE;
 
     // Calculate link endpoints (center of nodes' edges)
-    const sourceX = link.source.x! + link.source.size[0]! / 2;
-    const sourceY = link.source.y! + link.source.size[1]!;
-    const targetX = link.target.x! + link.target.size[0]! / 2;
-    const targetY = link.target.y!;
+    const sourceX = source.y; // + source.data.width!;
+    const sourceY = -source.x!;
+    const targetX = target.y;
+    const targetY = -target.x!;
 
     // Calculate control points for a cubic Bezier curve
-    const controlPoint1X = sourceX;
-    const controlPoint1Y = sourceY + (targetY - sourceY) / 3;
-    const controlPoint2X = targetX;
-    const controlPoint2Y = targetY - (targetY - sourceY) / 3;
+    const controlPoint1X = (sourceX + targetX) / 2;
+    const controlPoint1Y = sourceY;
+    const controlPoint2X = (sourceX + targetX) / 2;
+    const controlPoint2Y = targetY;
 
     linkData[offset] = sourceX;
     linkData[offset + 1] = sourceY;

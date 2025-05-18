@@ -1,4 +1,5 @@
 import { Renderer as BaseRenderer } from '.';
+import { LINK_STRIDE, NODE_STRIDE } from '../constants';
 
 export class Renderer extends BaseRenderer {
   nodeData: Float32Array = new Float32Array(0);
@@ -20,26 +21,28 @@ export class Renderer extends BaseRenderer {
     const canvasWidth = this.canvas.width;
     const canvasHeight = this.canvas.height;
 
+    const ctx = this.ctx;
+
     // clear canvas
-    this.ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    this.ctx.save();
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.save();
 
     // Reset transform to identity
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     // Move origin to center of canvas
-    this.ctx.translate(canvasWidth / 2, canvasHeight / 2);
+    ctx.translate(canvasWidth / 2, canvasHeight / 2);
 
     // Scale to map -1 to +1 range to -canvasWidth/2 to +canvasWidth/2 (and similar for height)
     // Also, flip Y axis because canvas Y is downwards.
-    this.ctx.scale(canvasWidth / 2, -canvasHeight / 2);
+    ctx.scale(canvasWidth / 2, -canvasHeight / 2);
 
     // Now, apply the view-projection matrix (assuming it transforms to -1 to +1 NDC space)
     // The ctx.transform() method multiplies the current transformation matrix by the matrix described by:
     // (a, b, c, d, e, f) which are m11, m12, m21, m22, dx, dy
     // If this.view is column-major: [m0, m1, m2, m3,  m4, m5, m6, m7,  m8, m9, m10, m11,  m12, m13, m14, m15]
     // m11 = view[0], m12 = view[1] (Y component of X-basis), m21 = view[4] (X component of Y-basis), m22 = view[5] (Y component of Y-basis), dx = view[12], dy = view[13]
-    this.ctx.transform(
+    ctx.transform(
       this.view[0], // m11
       this.view[1], // m12
       this.view[4], // m21
@@ -48,28 +51,72 @@ export class Renderer extends BaseRenderer {
       this.view[13] // dy
     );
 
-    this.ctx.globalAlpha = 1.0;
-    this.ctx.lineWidth = 1;
+    ctx.globalAlpha = 1.0;
+    ctx.lineWidth = 1;
+
+    const data = this.nodeData;
+    const linkData = this.linkData;
+    const nodeCount = this.nodeCount;
+    const linkCount = this.linkCount;
+
+    if (nodeCount === 0 || linkCount === 0) {
+      ctx.restore();
+      return;
+    }
 
     // draw nodes
-    for (let i = 0; i < this.nodeCount; i++) {
-      const offset = i * 12;
-      const x = this.nodeData[offset];
-      const y = this.nodeData[offset + 1];
-      const width = this.nodeData[offset + 2];
-      const height = this.nodeData[offset + 3];
-      const r = this.nodeData[offset + 8];
-      const g = this.nodeData[offset + 9];
-      const b = this.nodeData[offset + 10];
-      const a = this.nodeData[offset + 11];
+    for (let i = 0; i < nodeCount; i++) {
+      const offset = i * NODE_STRIDE;
+      const x = data[offset];
+      const y = data[offset + 1];
+      const width = data[offset + 2];
+      const height = data[offset + 3];
+      const r = data[offset + 8];
+      const g = data[offset + 9];
+      const b = data[offset + 10];
+      const a = data[offset + 11];
 
       // draw node
-      this.ctx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
-      this.ctx.fillRect(x, y, width, height);
-      this.ctx.strokeStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
-      this.ctx.strokeRect(x, y, width, height);
+      ctx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
     }
-    this.ctx.restore();
+
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    for (let i = 0; i < nodeCount; i++) {
+      const offset = i * NODE_STRIDE;
+      const x = data[offset];
+      const y = data[offset + 1] + data[offset + 3] / 2;
+      ctx.moveTo(x, y);
+      ctx.arc(x, y, 1, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 0.1;
+    ctx.beginPath();
+    // Draw links as quadratic curves
+    for (let i = 0; i < linkCount; i++) {
+      const offset = i * LINK_STRIDE; // Adjust if your linkData stride is different
+
+      // Get source and target node positions
+      const x0 = linkData[offset];
+      const y0 = linkData[offset + 1];
+      const x1 = linkData[offset + 2];
+      const y1 = linkData[offset + 3];
+
+      const cpx1 = linkData[offset + 4];
+      const cpy1 = linkData[offset + 5];
+      const cpx2 = linkData[offset + 6];
+      const cpy2 = linkData[offset + 7];
+
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(cpx1, cpy1, cpx2, cpy2, x1, y1);
+    }
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   public resize(width: number, height: number): void {}
