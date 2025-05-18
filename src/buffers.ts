@@ -1,6 +1,6 @@
 import { FlextreeNode } from 'd3-flextree';
 import { Node } from './types';
-import { LAYER_GAP, LINK_STRIDE, NODE_STRIDE } from './constants';
+import { LINK_STRIDE, NODE_STRIDE } from './constants';
 
 type TreeNode = FlextreeNode<Node>;
 
@@ -146,5 +146,5 @@ function getColor(node: Node) {
     b = x;
   }
 
-  return { r: r + m, g: g + m, b: b + m, a: 1.0 }; // a = 1.0 for opaque
+  return { r: r + m, g: g + m, b: b + m, a: 0.5 }; // a = 1.0 for opaque
 }

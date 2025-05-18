@@ -1,11 +1,11 @@
-import { Renderer as BaseRenderer } from '.';
+import { BaseRenderer } from './base';
 import { LINK_STRIDE, NODE_STRIDE } from '../constants';
 
 export class Renderer extends BaseRenderer {
   nodeData: Float32Array = new Float32Array(0);
   linkData: Float32Array = new Float32Array(0);
   view: Float32Array = new Float32Array(0);
-  private ctx!: CanvasRenderingContext2D;
+  private context!: CanvasRenderingContext2D;
 
   constructor(canvas: HTMLCanvasElement) {
     super(canvas);
@@ -13,7 +13,7 @@ export class Renderer extends BaseRenderer {
 
   async init(viewProjMatrix: Float32Array) {
     this.view = viewProjMatrix;
-    this.ctx = this.canvas.getContext('2d')!;
+    this.context = this.canvas.getContext('2d')!;
   }
 
   // debug renderer for canvas2d
@@ -21,7 +21,7 @@ export class Renderer extends BaseRenderer {
     const canvasWidth = this.canvas.width;
     const canvasHeight = this.canvas.height;
 
-    const ctx = this.ctx;
+    const ctx = this.context;
 
     // clear canvas
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -59,62 +59,63 @@ export class Renderer extends BaseRenderer {
     const nodeCount = this.nodeCount;
     const linkCount = this.linkCount;
 
-    if (nodeCount === 0 || linkCount === 0) {
-      ctx.restore();
-      return;
+    {
+      // draw links
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 0.1;
+      ctx.beginPath();
+      for (let i = 0; i < linkCount; i++) {
+        const offset = i * LINK_STRIDE; // Adjust if your linkData stride is different
+
+        // Get source and target node positions
+        const x0 = linkData[offset];
+        const y0 = linkData[offset + 1];
+        const x1 = linkData[offset + 2];
+        const y1 = linkData[offset + 3];
+
+        const cpx1 = linkData[offset + 4];
+        const cpy1 = linkData[offset + 5];
+        const cpx2 = linkData[offset + 6];
+        const cpy2 = linkData[offset + 7];
+
+        ctx.moveTo(x0, y0);
+        ctx.bezierCurveTo(cpx1, cpy1, cpx2, cpy2, x1, y1);
+      }
+      ctx.stroke();
     }
 
-    // draw nodes
-    for (let i = 0; i < nodeCount; i++) {
-      const offset = i * NODE_STRIDE;
-      const x = data[offset];
-      const y = data[offset + 1];
-      const width = data[offset + 2];
-      const height = data[offset + 3];
-      const r = data[offset + 8];
-      const g = data[offset + 9];
-      const b = data[offset + 10];
-      const a = data[offset + 11];
+    {
+      // draw nodes
+      for (let i = 0; i < nodeCount; i++) {
+        const offset = i * NODE_STRIDE;
+        const x = data[offset];
+        const y = data[offset + 1];
+        const width = data[offset + 2];
+        const height = data[offset + 3];
+        const r = data[offset + 8];
+        const g = data[offset + 9];
+        const b = data[offset + 10];
+        const a = data[offset + 11];
 
-      // draw node
-      ctx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
-      ctx.fillRect(x, y, width, height);
-      ctx.strokeStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
+        // draw node
+        ctx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
+        ctx.fillRect(x, y, width, height);
+        ctx.strokeStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
+      }
     }
 
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    for (let i = 0; i < nodeCount; i++) {
-      const offset = i * NODE_STRIDE;
-      const x = data[offset];
-      const y = data[offset + 1] + data[offset + 3] / 2;
-      ctx.moveTo(x, y);
-      ctx.arc(x, y, 1, 0, Math.PI * 2);
+    {
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      for (let i = 0; i < nodeCount; i++) {
+        const offset = i * NODE_STRIDE;
+        const x = data[offset];
+        const y = data[offset + 1] + data[offset + 3] / 2;
+        ctx.moveTo(x, y);
+        ctx.arc(x, y, 1, 0, Math.PI * 2);
+      }
+      ctx.fill();
     }
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = 0.1;
-    ctx.beginPath();
-    // Draw links as quadratic curves
-    for (let i = 0; i < linkCount; i++) {
-      const offset = i * LINK_STRIDE; // Adjust if your linkData stride is different
-
-      // Get source and target node positions
-      const x0 = linkData[offset];
-      const y0 = linkData[offset + 1];
-      const x1 = linkData[offset + 2];
-      const y1 = linkData[offset + 3];
-
-      const cpx1 = linkData[offset + 4];
-      const cpy1 = linkData[offset + 5];
-      const cpx2 = linkData[offset + 6];
-      const cpy2 = linkData[offset + 7];
-
-      ctx.moveTo(x0, y0);
-      ctx.bezierCurveTo(cpx1, cpy1, cpx2, cpy2, x1, y1);
-    }
-    ctx.stroke();
 
     ctx.restore();
   }

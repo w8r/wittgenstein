@@ -3,6 +3,12 @@ struct VertexOutput {
   @location(0) tParam: f32,
   @location(1) sidePos: f32,
   @location(2) color: vec4f,
+
+  @location(3) p0: vec2f,
+  @location(4) cp1: vec2f,
+  @location(5) cp2: vec2f,
+  @location(6) p1: vec2f,
+  @location(7) localPos: f32,
 };
 
 struct Uniforms {
@@ -47,8 +53,9 @@ fn main(
 ) -> VertexOutput {
   var link = links[instanceIndex];
 
+
   // Constants for tessellation
-  let segmentCount = 20u;
+  let segmentCount = 39u;
   let verticesPerSegment = 2u; // Two vertices per segment for a triangle strip
 
   // Calculate segment index and side
@@ -80,8 +87,9 @@ fn main(
   let normalizedTangent = normalize(tangent);
   let normal = vec2f(-normalizedTangent.y, normalizedTangent.x);
 
+  let zoom = uniforms.viewProj[0][0];
   // Line width (can be made variable based on zoom level)
-  let lineWidth = 1.5;
+  let lineWidth = 0.1 * zoom; // Adjust based on your projection matrix
 
   // Final position
   let finalPos = curvePos + normal * side * lineWidth;
@@ -91,6 +99,22 @@ fn main(
   output.tParam = t;
   output.sidePos = side;
   output.color = link.color;
+
+  let curve = links[instanceIndex];
+  let p0 = curve.lsource;
+  let cp1 = curve.control1;
+  let cp2 = curve.control2;
+  let p1 = curve.ltarget;
+  let minPt = min(p0, min(p1, min(cp1, cp2)));
+  let maxPt = max(p0, max(p1, max(cp1, cp2)));
+
+  let center = (minPt + maxPt) * 0.5;
+  let size = maxPt - minPt + lineWidth;
+
+  output.p0 = p0;
+  output.cp1 = cp1;
+  output.cp2 = cp2;
+  output.p1 = p1;
 
   return output;
 }

@@ -2,8 +2,15 @@ import nodeFragmentShaderSrc from './node.frag.wgsl?raw';
 import nodeVertexShaderSrc from './node.vert.wgsl?raw';
 import linkFragmentShaderSrc from './link.frag.wgsl?raw';
 import linkVertexShaderSrc from './link.vert.wgsl?raw';
+import { BaseRenderer } from '../base';
+import { LINK_STRIDE, VERTICES_PER_EDGE } from '../../constants';
 
-export class Renderer {
+const QUAD_VERTICES = new Float32Array([
+  -0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5
+]);
+const QUAD_VERTEX_COUNT = 4;
+
+export class Renderer extends BaseRenderer {
   private device!: GPUDevice;
   private context!: GPUCanvasContext;
   private viewProjBuffer!: GPUBuffer;
@@ -13,11 +20,10 @@ export class Renderer {
   private linkPipeline!: GPURenderPipeline;
   private nodeBuffer!: GPUBuffer;
   private linkBuffer!: GPUBuffer;
+  private quadBuffer!: GPUBuffer;
 
   protected nodeCount: number = 0;
   protected linkCount: number = 0;
-
-  constructor(protected canvas: HTMLCanvasElement) {}
 
   private createViewProjBuffer(view: Float32Array) {
     this.viewProjBuffer = this.device.createBuffer({
@@ -68,6 +74,7 @@ export class Renderer {
   }
 
   async init(view: Float32Array) {
+    await super.init(view);
     // Request adapter
     const adapter = await navigator.gpu!.requestAdapter();
     if (!adapter) {
@@ -95,6 +102,110 @@ export class Renderer {
 
     // Create pipelines
     this.createPipelines();
+  }
+
+  private createNodePipeline(
+    nodeVertexShader: GPUShaderModule,
+    nodeFragmentShader: GPUShaderModule,
+    layout: GPUPipelineLayout
+  ) {
+    this.nodePipeline = this.device.createRenderPipeline({
+      layout,
+      vertex: {
+        module: nodeVertexShader,
+        entryPoint: 'main'
+      },
+      fragment: {
+        module: nodeFragmentShader,
+        entryPoint: 'main',
+        targets: [
+          {
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            blend: {
+              color: {
+                srcFactor: 'src-alpha',
+                dstFactor: 'one-minus-src-alpha'
+              },
+              alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha'
+              }
+            }
+          }
+        ]
+      },
+      primitive: {
+        topology: 'triangle-list',
+        cullMode: 'none'
+      },
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: true,
+        depthCompare: 'less'
+      }
+    });
+  }
+
+  private createLinkPipeline(
+    linkVertexShader: GPUShaderModule,
+    linkFragmentShader: GPUShaderModule,
+    layout: GPUPipelineLayout
+  ) {
+    this.linkPipeline = this.device.createRenderPipeline({
+      layout,
+      vertex: {
+        module: linkVertexShader,
+        entryPoint: 'main',
+        buffers: [
+          {
+            // Quad geometry (per-vertex)
+            arrayStride: 2 * 4,
+            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
+            stepMode: 'vertex'
+          },
+          {
+            // Per-link instance data
+            arrayStride: LINK_STRIDE * 4,
+            stepMode: 'instance',
+            attributes: [
+              // Adjust these attributes to match your WGSL shader's expectations
+              { shaderLocation: 1, offset: 0, format: 'float32x4' } // e.g. source/target positions
+              // Add more attributes as needed for color, thickness, etc.
+            ]
+          }
+        ]
+      },
+      fragment: {
+        module: linkFragmentShader,
+        entryPoint: 'main',
+        targets: [
+          {
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            // Add blending configuration for links if needed
+            blend: {
+              color: {
+                srcFactor: 'src-alpha',
+                dstFactor: 'one-minus-src-alpha'
+              },
+              alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha'
+              }
+            }
+          }
+        ]
+      },
+      primitive: {
+        topology: 'triangle-strip',
+        stripIndexFormat: undefined // Not needed for quad strip
+      },
+      // Add depthStencil configuration to fix the error
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: true,
+        depthCompare: 'less'
+      }
+    });
   }
 
   /**
@@ -130,79 +241,16 @@ export class Renderer {
       bindGroupLayouts: [bindGroupLayout]
     });
 
-    // Create node pipeline
-    this.nodePipeline = this.device.createRenderPipeline({
-      layout: pipelineLayout,
-      vertex: {
-        module: nodeVertexShader,
-        entryPoint: 'main'
-      },
-      fragment: {
-        module: nodeFragmentShader,
-        entryPoint: 'main',
-        targets: [
-          {
-            format: navigator.gpu.getPreferredCanvasFormat(),
-            blend: {
-              color: {
-                srcFactor: 'src-alpha',
-                dstFactor: 'one-minus-src-alpha'
-              },
-              alpha: {
-                srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha'
-              }
-            }
-          }
-        ]
-      },
-      primitive: {
-        topology: 'triangle-list',
-        cullMode: 'none'
-      },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: true,
-        depthCompare: 'less'
-      }
-    });
-
-    // Create link pipeline
-    this.linkPipeline = this.device.createRenderPipeline({
-      layout: pipelineLayout,
-      vertex: {
-        module: linkVertexShader,
-        entryPoint: 'main'
-      },
-      fragment: {
-        module: linkFragmentShader,
-        entryPoint: 'main',
-        targets: [
-          {
-            format: navigator.gpu.getPreferredCanvasFormat(),
-            blend: {
-              color: {
-                srcFactor: 'src-alpha',
-                dstFactor: 'one-minus-src-alpha'
-              },
-              alpha: {
-                srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha'
-              }
-            }
-          }
-        ]
-      },
-      primitive: {
-        topology: 'triangle-strip',
-        stripIndexFormat: 'uint32'
-      },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: true,
-        depthCompare: 'less'
-      }
-    });
+    this.createNodePipeline(
+      nodeVertexShader,
+      nodeFragmentShader,
+      pipelineLayout
+    );
+    this.createLinkPipeline(
+      linkVertexShader,
+      linkFragmentShader,
+      pipelineLayout
+    );
   }
 
   private createEmptyBuffers() {
@@ -219,15 +267,24 @@ export class Renderer {
     // Create link buffer
     this.linkBuffer = this.device.createBuffer({
       size: minLinkBufferSize,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+      usage:
+        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
+    });
+
+    // Quad buffer: 4 vertices, 2 floats per vertex
+    this.quadBuffer = this.device.createBuffer({
+      size: QUAD_VERTICES.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
     });
 
     // Initialize with empty data
-    const emptyNodeData = new Float32Array(minNodeBufferSize / 4); // Divide by 4 because Float32Array counts elements, not bytes
+    const emptyNodeData = new Float32Array(minNodeBufferSize / 4);
+    // Divide by 4 because Float32Array counts elements, not bytes
     const emptyLinkData = new Float32Array(minLinkBufferSize / 4);
 
     this.device.queue.writeBuffer(this.nodeBuffer, 0, emptyNodeData);
     this.device.queue.writeBuffer(this.linkBuffer, 0, emptyLinkData);
+    this.device.queue.writeBuffer(this.quadBuffer, 0, QUAD_VERTICES);
 
     // Initialize counts to 0
     this.nodeCount = 0;
@@ -289,7 +346,6 @@ export class Renderer {
     linkData: Float32Array;
     linkCount: number;
   }) {
-    console.log({ nodeData, nodeCount, linkData, linkCount });
     this.nodeCount = nodeCount;
     this.linkCount = linkCount;
 
@@ -318,7 +374,10 @@ export class Renderer {
 
       this.linkBuffer = this.device.createBuffer({
         size: linkData.byteLength,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        usage:
+          GPUBufferUsage.STORAGE |
+          GPUBufferUsage.COPY_DST |
+          GPUBufferUsage.VERTEX
       });
 
       bindGroupNeedsRecreation = true;
@@ -328,9 +387,7 @@ export class Renderer {
     this.device.queue.writeBuffer(this.linkBuffer, 0, linkData);
 
     // Recreate the bind group if we've changed any of the buffers
-    if (bindGroupNeedsRecreation) {
-      this.createBindGroup();
-    }
+    if (bindGroupNeedsRecreation) this.createBindGroup();
   }
 
   draw() {
@@ -339,7 +396,6 @@ export class Renderer {
 
     // Create command encoder
     const commandEncoder = this.device.createCommandEncoder();
-
     // Create render pass
     const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -361,18 +417,19 @@ export class Renderer {
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setBindGroup(0, this.bindGroup);
 
-    // Draw links first (so they appear behind nodes)
-    if (this.linkCount > 0) {
-      passEncoder.setPipeline(this.linkPipeline);
-      // Draw 40 vertices per curve = 20 segments * 2 vertices per segment
-      passEncoder.draw(40, this.linkCount);
-    }
+    // --- Draw links as instanced quads ---
+    passEncoder.setPipeline(this.linkPipeline);
+    passEncoder.setVertexBuffer(0, this.quadBuffer); // quad geometry
+    passEncoder.setVertexBuffer(1, this.linkBuffer); // per-link instance data
 
-    // Draw nodes
-    if (this.nodeCount > 0) {
-      passEncoder.setPipeline(this.nodePipeline);
-      passEncoder.draw(6, this.nodeCount); // 6 vertices per quad, instanced
-    }
+    // Calculate the total number of segments across all links
+    // Each link has (VERTICES_PER_EDGE - 1) segments
+    const totalSegments = this.linkCount * (VERTICES_PER_EDGE - 1);
+    passEncoder.draw(4, this.linkCount * VERTICES_PER_EDGE - 1, 0, 0); // 4 vertices per quad, instanced
+
+    // --- Draw nodes as before ---
+    passEncoder.setPipeline(this.nodePipeline);
+    passEncoder.draw(6, this.nodeCount); // 6 vertices per quad, instanced
 
     passEncoder.end();
 

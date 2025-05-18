@@ -2,7 +2,7 @@ import { serializeTreeForGPU } from './buffers';
 import { Camera } from './camera';
 import { layout } from './layout';
 import { Mouse } from './mouse';
-import { Renderer } from './renderer/canvas';
+import { Renderer } from './renderer/webgpu';
 import { Node } from './types';
 
 export class Viewer {

@@ -6,7 +6,7 @@ fn main(
 ) -> @location(0) vec4f {
   // Create anti-aliased edge
   let fade = 1.0 - abs(sidePos);
-  let edgeAA = smoothstep(0.0, 0.2, fade);
+  let edgeAA = smoothstep(0.0, 0.1, fade);
 
   // Make ends of curve taper a bit
   let endTaper = min(
@@ -15,7 +15,7 @@ fn main(
   );
 
   // Combine effects
-  let alpha = color.a * edgeAA * endTaper;
+  let alpha = color.a * edgeAA;
 
   return vec4f(color.rgb, alpha);
 }
