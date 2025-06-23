@@ -125,7 +125,6 @@ export class Renderer extends BaseRenderer {
   }
 
   public resize(width: number, height: number): void {
-    console.log('resize', width, height);
     this.canvas.width = width * window.devicePixelRatio;
     this.canvas.height = height * window.devicePixelRatio;
     this.canvas.style.width = `${width}px`;

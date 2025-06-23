@@ -3,7 +3,7 @@ import nodeVertexShaderSrc from './node.vert.wgsl?raw';
 import linkFragmentShaderSrc from './link.frag.wgsl?raw';
 import linkVertexShaderSrc from './link.vert.wgsl?raw';
 import { BaseRenderer } from '../base';
-import { LINK_STRIDE, VERTICES_PER_EDGE } from '../../constants';
+import { VERTICES_PER_EDGE } from '../../constants';
 
 const QUAD_VERTICES = new Float32Array([
   -0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5
@@ -156,24 +156,8 @@ export class Renderer extends BaseRenderer {
       vertex: {
         module: linkVertexShader,
         entryPoint: 'main',
-        buffers: [
-          {
-            // Quad geometry (per-vertex)
-            arrayStride: 2 * 4,
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-            stepMode: 'vertex'
-          },
-          {
-            // Per-link instance data
-            arrayStride: LINK_STRIDE * 4,
-            stepMode: 'instance',
-            attributes: [
-              // Adjust these attributes to match your WGSL shader's expectations
-              { shaderLocation: 1, offset: 0, format: 'float32x4' } // e.g. source/target positions
-              // Add more attributes as needed for color, thickness, etc.
-            ]
-          }
-        ]
+        // No vertex buffers needed for procedural geometry
+        buffers: []
       },
       fragment: {
         module: linkFragmentShader,
@@ -181,7 +165,6 @@ export class Renderer extends BaseRenderer {
         targets: [
           {
             format: navigator.gpu.getPreferredCanvasFormat(),
-            // Add blending configuration for links if needed
             blend: {
               color: {
                 srcFactor: 'src-alpha',
@@ -196,10 +179,8 @@ export class Renderer extends BaseRenderer {
         ]
       },
       primitive: {
-        topology: 'triangle-strip',
-        stripIndexFormat: undefined // Not needed for quad strip
+        topology: 'triangle-strip'
       },
-      // Add depthStencil configuration to fix the error
       depthStencil: {
         format: 'depth24plus',
         depthWriteEnabled: true,
@@ -417,28 +398,17 @@ export class Renderer extends BaseRenderer {
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setBindGroup(0, this.bindGroup);
 
-    // --- Draw links as instanced quads ---
+    // --- Draw links as instanced Bezier strips ---
     passEncoder.setPipeline(this.linkPipeline);
-    passEncoder.setVertexBuffer(0, this.quadBuffer); // quad geometry
-    passEncoder.setVertexBuffer(1, this.linkBuffer); // per-link instance data
+    // No vertex buffer needed for links
+    // passEncoder.setVertexBuffer(0, this.quadBuffer); // REMOVE THIS LINE
+    // passEncoder.setVertexBuffer(1, this.linkBuffer); // REMOVE THIS LINE
 
-    // Calculate the total number of segments across all links
-    // Each link has (VERTICES_PER_EDGE - 1) segments
-    // Calculate how many instances we can safely draw based on buffer size
-    // Each instance data entry is LINK_STRIDE * 4 bytes
-    const maxInstancesInBuffer = Math.floor(
-      this.linkBuffer.size / (LINK_STRIDE * 4)
-    );
-
-    // Instead of multiplying by (VERTICES_PER_EDGE - 1), let's just use the actual
-    // number of instances we can fit in the buffer
-    const instanceCount = Math.min(this.linkCount, maxInstancesInBuffer);
-    console.log(
-      `Drawing ${instanceCount} link instances (max: ${maxInstancesInBuffer}, buffer size: ${this.linkBuffer.size} bytes)`
-    );
-
-    // Draw the segments as instanced quads
-    passEncoder.draw(QUAD_VERTEX_COUNT, instanceCount);
+    // Each Bezier curve is tessellated into segmentCount segments, 2 vertices per segment
+    //const SEGMENT_COUNT = 80;
+    //const VERTICES_PER_EDGE = SEGMENT_COUNT * 2;
+    const instanceCount = this.linkCount;
+    passEncoder.draw(VERTICES_PER_EDGE, instanceCount);
 
     // --- Draw nodes as before ---
     passEncoder.setPipeline(this.nodePipeline);
