@@ -424,8 +424,21 @@ export class Renderer extends BaseRenderer {
 
     // Calculate the total number of segments across all links
     // Each link has (VERTICES_PER_EDGE - 1) segments
-    const totalSegments = this.linkCount * (VERTICES_PER_EDGE - 1);
-    passEncoder.draw(4, this.linkCount * VERTICES_PER_EDGE - 1, 0, 0); // 4 vertices per quad, instanced
+    // Calculate how many instances we can safely draw based on buffer size
+    // Each instance data entry is LINK_STRIDE * 4 bytes
+    const maxInstancesInBuffer = Math.floor(
+      this.linkBuffer.size / (LINK_STRIDE * 4)
+    );
+
+    // Instead of multiplying by (VERTICES_PER_EDGE - 1), let's just use the actual
+    // number of instances we can fit in the buffer
+    const instanceCount = Math.min(this.linkCount, maxInstancesInBuffer);
+    console.log(
+      `Drawing ${instanceCount} link instances (max: ${maxInstancesInBuffer}, buffer size: ${this.linkBuffer.size} bytes)`
+    );
+
+    // Draw the segments as instanced quads
+    passEncoder.draw(QUAD_VERTEX_COUNT, instanceCount);
 
     // --- Draw nodes as before ---
     passEncoder.setPipeline(this.nodePipeline);

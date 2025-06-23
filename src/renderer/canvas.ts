@@ -11,6 +11,10 @@ export class Renderer extends BaseRenderer {
     super(canvas);
   }
 
+  static isSupported() {
+    return true;
+  }
+
   async init(viewProjMatrix: Float32Array) {
     this.view = viewProjMatrix;
     this.context = this.canvas.getContext('2d')!;
@@ -120,7 +124,13 @@ export class Renderer extends BaseRenderer {
     ctx.restore();
   }
 
-  public resize(width: number, height: number): void {}
+  public resize(width: number, height: number): void {
+    console.log('resize', width, height);
+    this.canvas.width = width * window.devicePixelRatio;
+    this.canvas.height = height * window.devicePixelRatio;
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+  }
 
   upload({
     nodeData,

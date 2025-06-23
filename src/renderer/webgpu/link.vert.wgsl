@@ -9,7 +9,19 @@ struct VertexOutput {
   @location(5) cp2: vec2f,
   @location(6) p1: vec2f,
   @location(7) localPos: f32,
+  @location(8) finalPos: vec4f,
 };
+
+struct NodeData {
+  position: vec2f,
+  size: vec2f,
+  isCollapsed: f32,
+  hasFormula: f32,
+  padding1: f32,
+  padding2: f32,
+  color: vec4f,
+};
+
 
 struct Uniforms {
   viewProj: mat4x4f,
@@ -55,7 +67,7 @@ fn main(
 
 
   // Constants for tessellation
-  let segmentCount = 39u;
+  let segmentCount = 80u;
   let verticesPerSegment = 2u; // Two vertices per segment for a triangle strip
 
   // Calculate segment index and side
@@ -99,6 +111,52 @@ fn main(
   output.tParam = t;
   output.sidePos = side;
   output.color = link.color;
+
+  // let VERTICES_PER_EDGE = 80.0;
+  // let SEGMENTS_PER_EDGE = VERTICES_PER_EDGE - 1.0;
+  // let linkIndex = instanceIndex / u32(SEGMENTS_PER_EDGE);
+  // let segmentIndex = instanceIndex % u32(SEGMENTS_PER_EDGE);
+
+  let segmentT0 = f32(segmentIndex) / f32(segmentCount);
+  let segmentT1 = f32(segmentIndex + 1u) / f32(segmentCount);
+
+  let segmentStart = mix(link.lsource, link.ltarget, segmentT0);
+  let segmentEnd = mix(link.lsource, link.ltarget, segmentT1);
+
+  let segmentDir = normalize(segmentEnd - segmentStart);
+  // Calculate the perpendicular direction
+  let segmentPerp = vec3<f32>(-segmentDir.y, segmentDir.x, 0.0);
+
+  let halfThickness = lineWidth * 0.5;
+
+  // Use a branchless approach to calculate vertex positions
+  // For a quad in triangle strip order:
+  // vertexIndex 0: bottom-left
+  // vertexIndex 1: top-left
+  // vertexIndex 2: bottom-right
+  // vertexIndex 3: top-right
+
+  let isLeft = f32((vertexIndex & 1u) == 0u);        // true for vertices 0 and 2
+  let isBottom = f32((vertexIndex & 2u) == 0u);      // true for vertices 0 and 1
+
+  let posX = mix(segmentEnd.x, segmentStart.x, isLeft);
+  let posY = mix(segmentEnd.y, segmentStart.y, isLeft);
+
+  // Calculate the offset based on thickness
+  // Use 1.0 for top vertices and -1.0 for bottom vertices to determine offset direction
+  let perpSign = mix(1.0, -1.0, isBottom);
+
+  // Apply perpendicular offset for thickness
+  let vertexPos1 = vec3<f32>(
+    posX + segmentPerp.x * halfThickness * perpSign,
+    posY + segmentPerp.y * halfThickness * perpSign,
+    0.0
+  );
+
+  output.finalPos = uniforms.viewProj * vec4f(vertexPos1,  1.0);
+
+
+
 
   let curve = links[instanceIndex];
   let p0 = curve.lsource;
