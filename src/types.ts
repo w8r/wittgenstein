@@ -30,3 +30,19 @@ export interface Node {
 }
 
 export type Point = { x: number; y: number };
+
+export interface TextAtlas {
+  width: number;
+  height: number;
+  glyphs: Record<string, GlyphMetrics>;
+}
+
+export interface GlyphMetrics {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  advance: number;
+  bearingX: number;
+  bearingY: number;
+}
