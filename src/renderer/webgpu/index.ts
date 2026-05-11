@@ -78,6 +78,7 @@ export class Renderer extends BaseRenderer {
   }
 
   public updateViewProj(matrix: Float32Array) {
+    if (!this.device || !this.viewProjBuffer) return;
     this.device.queue.writeBuffer(this.viewProjBuffer, 0, matrix);
   }
 
@@ -158,10 +159,7 @@ export class Renderer extends BaseRenderer {
         addressModeV: 'clamp-to-edge'
       });
 
-      // Create text pipeline
-      this.createTextPipeline();
-
-      // Create empty glyph buffer
+      // Create empty glyph buffer BEFORE creating pipeline
       const minGlyphBufferSize = 16 * 4 * 10; // Space for 10 glyphs
       this.glyphBuffer = this.device.createBuffer({
         size: minGlyphBufferSize,
@@ -172,6 +170,9 @@ export class Renderer extends BaseRenderer {
       const emptyGlyphData = new Float32Array(minGlyphBufferSize / 4);
       this.device.queue.writeBuffer(this.glyphBuffer, 0, emptyGlyphData);
       this.glyphCount = 0;
+
+      // Create text pipeline AFTER buffer exists
+      this.createTextPipeline();
 
       this.textEnabled = true;
       console.log('Text rendering initialized successfully');
