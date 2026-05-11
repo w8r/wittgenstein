@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "types": ["@webgpu/types", "vite/client", "vitest/globals"]
   },
-  "include": ["src"]
+  "include": ["src", "test"]
 }
