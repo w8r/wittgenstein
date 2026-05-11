@@ -10,6 +10,7 @@ import {
   LINE_HEIGHT,
   ID_OFFSET
 } from './constants';
+import { TexLinebreak } from 'tex-linebreak2';
 
 type TreeNode = FlextreeNode<Node>;
 
@@ -183,7 +184,7 @@ export async function serializeTextForGPU(root: TreeNode): Promise<{
       if (node.data.data && node.data.data.content) {
         const proposition = node.data.data;
         // Render proposition ID first (to the left, vertically centered)
-        const idGlyphs = layoutText(
+        const idLayout = layoutText(
           proposition.id, // e.g., "1.11"
           node.y - ID_OFFSET, // Position to the left of text block (rotated coords)
           -node.x! - node.size[0] / 2, // Vertical center (rotated coords)
@@ -191,10 +192,10 @@ export async function serializeTextForGPU(root: TreeNode): Promise<{
           PROPOSITION_ID_COLOR,
           PROPOSITION_ID_SCALE
         );
-        glyphs.push(...idGlyphs);
+        glyphs.push(...idLayout.glyphs);
 
         // Render proposition content (fixed width layout)
-        const contentGlyphs = layoutText(
+        const contentLayout = layoutText(
           proposition.content,
           node.y,
           -node.x! - node.size[0] / 2,
@@ -203,7 +204,7 @@ export async function serializeTextForGPU(root: TreeNode): Promise<{
           1.0, // Normal scale
           proposition.width // Fixed width for wrapping
         );
-        glyphs.push(...contentGlyphs);
+        glyphs.push(...contentLayout.glyphs);
       }
 
       node.children?.forEach(traverse);
@@ -221,7 +222,10 @@ export async function serializeTextForGPU(root: TreeNode): Promise<{
   }
 }
 
-function layoutText(
+/**
+ * Layout text with line breaking and return glyph data plus dimensions
+ */
+export function layoutText(
   text: string,
   x: number,
   y: number,
@@ -229,45 +233,217 @@ function layoutText(
   color: readonly number[],
   scale: number,
   maxWidth?: number
-): number[] {
+): { glyphs: number[]; width: number; height: number } {
   const glyphs: number[] = [];
-  let cursorX = x;
-  let cursorY = y;
+  let maxLineWidth = 0;
+  let currentY = y;
 
-  // Simple left-to-right layout
-  // TODO: Handle line breaks with maxWidth (use tex-linebreak library if available)
-  for (const char of text) {
-    if (char === '\n') {
-      cursorX = x;
-      cursorY += LINE_HEIGHT * scale;
-      continue;
-    }
-
-    const metrics = atlas.glyphs[char];
-    if (!metrics) {
-      console.warn(`Glyph not found in atlas: ${char}`);
-      continue;
-    }
-
-    // Serialize glyph instance data (matches GlyphData struct in shader)
-    glyphs.push(
-      cursorX + metrics.bearingX * scale, // posX
-      cursorY + metrics.bearingY * scale, // posY
-      metrics.x / atlas.width, // atlasPosX (normalized)
-      metrics.y / atlas.height, // atlasPosY (normalized)
-      metrics.width / atlas.width, // atlasSizeX (normalized)
-      metrics.height / atlas.height, // atlasSizeY (normalized)
-      metrics.width * scale, // glyphSizeX (world space)
-      metrics.height * scale, // glyphSizeY (world space)
-      ...color, // colorR, colorG, colorB, colorA
-      0,
-      0,
-      0,
-      0 // padding for alignment
-    );
-
-    cursorX += metrics.advance * scale;
+  // Handle empty text
+  if (!text || text.trim().length === 0) {
+    return { glyphs: [], width: 0, height: 0 };
   }
 
-  return glyphs;
+  // If maxWidth is specified, use tex-linebreak2 for quality line breaking
+  if (maxWidth) {
+
+    // Measure function for tex-linebreak2
+    const measureFn = (word: string) => {
+      let width = 0;
+      for (const char of word) {
+        const metrics = atlas.glyphs[char];
+        if (metrics) {
+          width += metrics.advance * scale;
+        }
+      }
+      return width;
+    };
+
+    // Use tex-linebreak2 for Knuth-Plass line breaking
+    const linebreaker = new TexLinebreak(text, {
+      lineWidth: maxWidth,
+      measureFn,
+      justify: false,
+      align: 'left'
+    });
+
+    const lines = linebreaker.lines;
+
+    // Layout each line
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
+      const lineText = line.plaintext;
+
+      let cursorX = x;
+
+      // Layout glyphs for this line
+      for (const char of lineText) {
+        const metrics = atlas.glyphs[char];
+        if (!metrics) {
+          console.warn(`Glyph not found in atlas: ${char}`);
+          continue;
+        }
+
+        glyphs.push(
+          cursorX + metrics.bearingX * scale, // posX
+          currentY + metrics.bearingY * scale, // posY
+          metrics.x / atlas.width, // atlasPosX (normalized)
+          metrics.y / atlas.height, // atlasPosY (normalized)
+          metrics.width / atlas.width, // atlasSizeX (normalized)
+          metrics.height / atlas.height, // atlasSizeY (normalized)
+          metrics.width * scale, // glyphSizeX (world space)
+          metrics.height * scale, // glyphSizeY (world space)
+          ...color, // colorR, colorG, colorB, colorA
+          0,
+          0,
+          0,
+          0 // padding for alignment
+        );
+
+        cursorX += metrics.advance * scale;
+      }
+
+      // Track maximum line width
+      const lineWidth = cursorX - x;
+      maxLineWidth = Math.max(maxLineWidth, lineWidth);
+
+      // Advance to next line
+      currentY += LINE_HEIGHT * scale;
+    }
+
+    const height = lines.length * LINE_HEIGHT * scale;
+    return { glyphs, width: maxLineWidth, height };
+  } else {
+    // Simple left-to-right layout without line breaking
+    let cursorX = x;
+    let lineCount = 1;
+
+    for (const char of text) {
+      if (char === '\n') {
+        const lineWidth = cursorX - x;
+        maxLineWidth = Math.max(maxLineWidth, lineWidth);
+        cursorX = x;
+        currentY += LINE_HEIGHT * scale;
+        lineCount++;
+        continue;
+      }
+
+      const metrics = atlas.glyphs[char];
+      if (!metrics) {
+        console.warn(`Glyph not found in atlas: ${char}`);
+        continue;
+      }
+
+      glyphs.push(
+        cursorX + metrics.bearingX * scale, // posX
+        currentY + metrics.bearingY * scale, // posY
+        metrics.x / atlas.width, // atlasPosX (normalized)
+        metrics.y / atlas.height, // atlasPosY (normalized)
+        metrics.width / atlas.width, // atlasSizeX (normalized)
+        metrics.height / atlas.height, // atlasSizeY (normalized)
+        metrics.width * scale, // glyphSizeX (world space)
+        metrics.height * scale, // glyphSizeY (world space)
+        ...color, // colorR, colorG, colorB, colorA
+        0,
+        0,
+        0,
+        0 // padding for alignment
+      );
+
+      cursorX += metrics.advance * scale;
+    }
+
+    // Track the final line width
+    const finalLineWidth = cursorX - x;
+    maxLineWidth = Math.max(maxLineWidth, finalLineWidth);
+
+    const height = lineCount * LINE_HEIGHT * scale;
+    return { glyphs, width: maxLineWidth, height };
+  }
+}
+
+/**
+ * Measure text dimensions without generating glyphs (lighter weight for layout calculations)
+ */
+export function measureText(
+  text: string,
+  atlas: TextAtlas,
+  scale: number,
+  maxWidth?: number
+): { width: number; height: number } {
+  // Handle empty text
+  if (!text || text.trim().length === 0) {
+    return { width: 0, height: 0 };
+  }
+
+  // If maxWidth is specified, use tex-linebreak2 for accurate measurement
+  if (maxWidth) {
+
+    // Measure function for tex-linebreak2
+    const measureFn = (word: string) => {
+      let width = 0;
+      for (const char of word) {
+        const metrics = atlas.glyphs[char];
+        if (metrics) {
+          width += metrics.advance * scale;
+        }
+      }
+      return width;
+    };
+
+    const linebreaker = new TexLinebreak(text, {
+      lineWidth: maxWidth,
+      measureFn,
+      justify: false,
+      align: 'left'
+    });
+
+    const lines = linebreaker.lines;
+    let maxLineWidth = 0;
+
+    // Measure each line
+    for (const line of lines) {
+      const lineText = line.plaintext;
+      let lineWidth = 0;
+
+      for (const char of lineText) {
+        const metrics = atlas.glyphs[char];
+        if (metrics) {
+          lineWidth += metrics.advance * scale;
+        }
+      }
+
+      maxLineWidth = Math.max(maxLineWidth, lineWidth);
+    }
+
+    return {
+      width: maxLineWidth,
+      height: lines.length * LINE_HEIGHT * scale
+    };
+  } else {
+    // Simple measurement without line breaking
+    let currentLineWidth = 0;
+    let maxLineWidth = 0;
+    let lineCount = 1;
+
+    for (const char of text) {
+      if (char === '\n') {
+        maxLineWidth = Math.max(maxLineWidth, currentLineWidth);
+        currentLineWidth = 0;
+        lineCount++;
+        continue;
+      }
+
+      const metrics = atlas.glyphs[char];
+      if (metrics) {
+        currentLineWidth += metrics.advance * scale;
+      }
+    }
+
+    maxLineWidth = Math.max(maxLineWidth, currentLineWidth);
+
+    return {
+      width: maxLineWidth,
+      height: lineCount * LINE_HEIGHT * scale
+    };
+  }
 }
