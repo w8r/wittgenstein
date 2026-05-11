@@ -3,7 +3,7 @@ import { Camera } from './camera';
 import { layout } from './layout';
 import { Mouse } from './mouse';
 import { Renderer } from './renderer/webgpu';
-import { Node } from './types';
+import { Node, TextAtlas } from './types';
 
 export class Viewer {
   private renderer!: Renderer;
@@ -13,6 +13,7 @@ export class Viewer {
   private renderFrame: number = 0;
 
   private tree!: Node;
+  private textAtlas?: TextAtlas;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.mouse = new Mouse(canvas, this.camera);
@@ -38,16 +39,34 @@ export class Viewer {
   };
 
   async init() {
-    this.tree = (await fetch('data.json').then((response) =>
-      response.json()
-    )) as Node;
+    // Initialize renderer first
     if (Renderer.isSupported()) {
       this.renderer = new Renderer(this.canvas);
       await this.renderer.init(
         this.camera.getViewProjMatrix(this.getAspectRatio())
       );
     }
-    const root = layout(this.tree);
+
+    // Load text atlas before tree layout (needed for text measurements)
+    try {
+      const atlasResponse = await fetch('text-atlas.json');
+      if (atlasResponse.ok) {
+        this.textAtlas = await atlasResponse.json();
+      } else {
+        console.warn('Failed to load text-atlas.json, using fallback node sizes');
+      }
+    } catch (error) {
+      console.warn('Error loading text atlas:', error);
+    }
+
+    // Load tree data
+    this.tree = (await fetch('data.json').then((response) =>
+      response.json()
+    )) as Node;
+
+    // Compute layout with text measurements
+    const root = layout(this.tree, this.textAtlas);
+
     // Update renderer with the tree data
     if (this.tree && this.renderer) {
       const serializedData = serializeTreeForGPU(root);

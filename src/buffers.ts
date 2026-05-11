@@ -8,7 +8,10 @@ import {
   PROPOSITION_TEXT_COLOR,
   PROPOSITION_ID_SCALE,
   LINE_HEIGHT,
-  ID_OFFSET
+  ID_OFFSET,
+  PADDING_X,
+  PADDING_Y,
+  ID_WIDTH
 } from './constants';
 import { TexLinebreak } from 'tex-linebreak2';
 
@@ -183,28 +186,37 @@ export async function serializeTextForGPU(root: TreeNode): Promise<{
     function traverse(node: TreeNode) {
       if (node.data.data && node.data.data.content) {
         const proposition = node.data.data;
-        // Render proposition ID first (to the left, vertically centered)
-        const idLayout = layoutText(
-          proposition.id, // e.g., "1.11"
-          node.y - ID_OFFSET, // Position to the left of text block (rotated coords)
-          -node.x! - node.size[0] / 2, // Vertical center (rotated coords)
-          atlas,
-          PROPOSITION_ID_COLOR,
-          PROPOSITION_ID_SCALE
-        );
-        glyphs.push(...idLayout.glyphs);
 
-        // Render proposition content (fixed width layout)
+        // Calculate text block position (rotated 90° clockwise)
+        const textBlockX = node.y + PADDING_X + ID_WIDTH;
+        const textBlockY = -node.x! - node.size[0] / 2 + PADDING_Y;
+
+        // Render proposition content first to get dimensions
         const contentLayout = layoutText(
           proposition.content,
-          node.y,
-          -node.x! - node.size[0] / 2,
+          textBlockX,
+          textBlockY,
           atlas,
           PROPOSITION_TEXT_COLOR,
           1.0, // Normal scale
           proposition.width // Fixed width for wrapping
         );
         glyphs.push(...contentLayout.glyphs);
+
+        // Position ID at vertical center of text block (not node center)
+        const idY = textBlockY + contentLayout.height / 2;
+        const idX = node.y + PADDING_X; // To the left of text
+
+        // Render proposition ID (vertically centered with text)
+        const idLayout = layoutText(
+          proposition.id, // e.g., "1.11"
+          idX,
+          idY,
+          atlas,
+          PROPOSITION_ID_COLOR,
+          PROPOSITION_ID_SCALE
+        );
+        glyphs.push(...idLayout.glyphs);
       }
 
       node.children?.forEach(traverse);
