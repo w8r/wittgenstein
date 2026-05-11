@@ -2,6 +2,8 @@ import nodeFragmentShaderSrc from './node.frag.wgsl?raw';
 import nodeVertexShaderSrc from './node.vert.wgsl?raw';
 import linkFragmentShaderSrc from './link.frag.wgsl?raw';
 import linkVertexShaderSrc from './link.vert.wgsl?raw';
+import textFragmentShaderSrc from './text.frag.wgsl?raw';
+import textVertexShaderSrc from './text.vert.wgsl?raw';
 import { BaseRenderer } from '../base';
 import { VERTICES_PER_EDGE } from '../../constants';
 
@@ -22,8 +24,18 @@ export class Renderer extends BaseRenderer {
   private linkBuffer!: GPUBuffer;
   private quadBuffer!: GPUBuffer;
 
+  // Text rendering resources
+  private textPipeline!: GPURenderPipeline;
+  private textBindGroup!: GPUBindGroup;
+  private textureBindGroup!: GPUBindGroup;
+  private glyphBuffer!: GPUBuffer;
+  private atlasTexture!: GPUTexture;
+  private atlasSampler!: GPUSampler;
+  private textEnabled: boolean = false;
+
   protected nodeCount: number = 0;
   protected linkCount: number = 0;
+  protected glyphCount: number = 0;
 
   private createViewProjBuffer(view: Float32Array) {
     this.viewProjBuffer = this.device.createBuffer({
@@ -102,6 +114,72 @@ export class Renderer extends BaseRenderer {
 
     // Create pipelines
     this.createPipelines();
+
+    // Initialize text rendering (async, non-blocking)
+    this.initTextRendering().catch((err: unknown) => {
+      console.error('Failed to initialize text rendering:', err);
+      this.textEnabled = false;
+    });
+  }
+
+  private async initTextRendering() {
+    try {
+      // Load text atlas texture
+      const atlasImageResponse = await fetch('text-atlas.png');
+      if (!atlasImageResponse.ok) {
+        throw new Error('Failed to load text-atlas.png');
+      }
+      const atlasImageBlob = await atlasImageResponse.blob();
+      const atlasImageBitmap = await createImageBitmap(atlasImageBlob);
+
+      // Create texture
+      this.atlasTexture = this.device.createTexture({
+        size: [atlasImageBitmap.width, atlasImageBitmap.height, 1],
+        format: 'rgba8unorm',
+        usage:
+          GPUTextureUsage.TEXTURE_BINDING |
+          GPUTextureUsage.COPY_DST |
+          GPUTextureUsage.RENDER_ATTACHMENT
+      });
+
+      // Write image data to texture
+      this.device.queue.copyExternalImageToTexture(
+        { source: atlasImageBitmap },
+        { texture: this.atlasTexture },
+        [atlasImageBitmap.width, atlasImageBitmap.height]
+      );
+
+      // Create sampler
+      this.atlasSampler = this.device.createSampler({
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge'
+      });
+
+      // Create text pipeline
+      this.createTextPipeline();
+
+      // Create empty glyph buffer
+      const minGlyphBufferSize = 16 * 4 * 10; // Space for 10 glyphs
+      this.glyphBuffer = this.device.createBuffer({
+        size: minGlyphBufferSize,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+      });
+
+      // Initialize with empty data
+      const emptyGlyphData = new Float32Array(minGlyphBufferSize / 4);
+      this.device.queue.writeBuffer(this.glyphBuffer, 0, emptyGlyphData);
+      this.glyphCount = 0;
+
+      this.textEnabled = true;
+      console.log('Text rendering initialized successfully');
+    } catch (error) {
+      console.error('Error initializing text rendering:', error);
+      this.textEnabled = false;
+      throw error;
+    }
   }
 
   private createNodePipeline(
@@ -186,6 +264,123 @@ export class Renderer extends BaseRenderer {
         depthWriteEnabled: true,
         depthCompare: 'less'
       }
+    });
+  }
+
+  private createTextPipeline() {
+    // Create shader modules
+    const textVertexShader = this.device.createShaderModule({
+      label: 'Text Vertex Shader',
+      code: textVertexShaderSrc
+    });
+
+    const textFragmentShader = this.device.createShaderModule({
+      label: 'Text Fragment Shader',
+      code: textFragmentShaderSrc
+    });
+
+    // Create bind group layout for uniforms and glyph buffer (group 0)
+    const textBindGroupLayout = this.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: { type: 'uniform' }
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: { type: 'read-only-storage' }
+        }
+      ]
+    });
+
+    // Create bind group layout for texture and sampler (group 1)
+    const textureBindGroupLayout = this.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {}
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {}
+        }
+      ]
+    });
+
+    // Create pipeline layout
+    const pipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [textBindGroupLayout, textureBindGroupLayout]
+    });
+
+    // Create render pipeline
+    this.textPipeline = this.device.createRenderPipeline({
+      layout: pipelineLayout,
+      vertex: {
+        module: textVertexShader,
+        entryPoint: 'main'
+      },
+      fragment: {
+        module: textFragmentShader,
+        entryPoint: 'main',
+        targets: [
+          {
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            blend: {
+              color: {
+                srcFactor: 'src-alpha',
+                dstFactor: 'one-minus-src-alpha'
+              },
+              alpha: {
+                srcFactor: 'one',
+                dstFactor: 'one-minus-src-alpha'
+              }
+            }
+          }
+        ]
+      },
+      primitive: {
+        topology: 'triangle-list',
+        cullMode: 'none'
+      },
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: true,
+        depthCompare: 'less'
+      }
+    });
+
+    // Create bind group for uniforms and glyph buffer (group 0)
+    this.textBindGroup = this.device.createBindGroup({
+      layout: textBindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: { buffer: this.viewProjBuffer }
+        },
+        {
+          binding: 1,
+          resource: { buffer: this.glyphBuffer }
+        }
+      ]
+    });
+
+    // Create bind group for texture and sampler (group 1)
+    this.textureBindGroup = this.device.createBindGroup({
+      layout: textureBindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: this.atlasSampler
+        },
+        {
+          binding: 1,
+          resource: this.atlasTexture.createView()
+        }
+      ]
     });
   }
 
@@ -320,12 +515,16 @@ export class Renderer extends BaseRenderer {
     nodeData,
     nodeCount,
     linkData,
-    linkCount
+    linkCount,
+    glyphData,
+    glyphCount
   }: {
     nodeData: Float32Array;
     nodeCount: number;
     linkData: Float32Array;
     linkCount: number;
+    glyphData?: Float32Array;
+    glyphCount?: number;
   }) {
     this.nodeCount = nodeCount;
     this.linkCount = linkCount;
@@ -369,6 +568,47 @@ export class Renderer extends BaseRenderer {
 
     // Recreate the bind group if we've changed any of the buffers
     if (bindGroupNeedsRecreation) this.createBindGroup();
+
+    // Handle text glyph data (optional)
+    if (glyphData && glyphCount !== undefined && this.textEnabled) {
+      this.glyphCount = glyphCount;
+
+      let textBindGroupNeedsRecreation = false;
+
+      // Create or update glyph buffer
+      if (!this.glyphBuffer || this.glyphBuffer.size < glyphData.byteLength) {
+        // If buffer doesn't exist or is too small, create a new one
+        if (this.glyphBuffer) this.glyphBuffer.destroy();
+
+        this.glyphBuffer = this.device.createBuffer({
+          size: glyphData.byteLength,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+
+        textBindGroupNeedsRecreation = true;
+      }
+
+      // Write data to glyph buffer
+      this.device.queue.writeBuffer(this.glyphBuffer, 0, glyphData);
+
+      // Recreate text bind group if buffer changed
+      if (textBindGroupNeedsRecreation && this.textBindGroup) {
+        const textBindGroupLayout = this.textPipeline.getBindGroupLayout(0);
+        this.textBindGroup = this.device.createBindGroup({
+          layout: textBindGroupLayout,
+          entries: [
+            {
+              binding: 0,
+              resource: { buffer: this.viewProjBuffer }
+            },
+            {
+              binding: 1,
+              resource: { buffer: this.glyphBuffer }
+            }
+          ]
+        });
+      }
+    }
   }
 
   draw() {
@@ -413,6 +653,14 @@ export class Renderer extends BaseRenderer {
     // --- Draw nodes as before ---
     passEncoder.setPipeline(this.nodePipeline);
     passEncoder.draw(6, this.nodeCount); // 6 vertices per quad, instanced
+
+    // --- Draw text (after nodes, before ending pass) ---
+    if (this.textEnabled && this.glyphCount > 0) {
+      passEncoder.setPipeline(this.textPipeline);
+      passEncoder.setBindGroup(0, this.textBindGroup);
+      passEncoder.setBindGroup(1, this.textureBindGroup);
+      passEncoder.draw(6, this.glyphCount, 0, 0); // 6 vertices per glyph quad, instanced
+    }
 
     passEncoder.end();
 

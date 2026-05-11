@@ -19,6 +19,8 @@ export abstract class BaseRenderer {
     nodeCount: number;
     linkData: Float32Array;
     linkCount: number;
+    glyphData?: Float32Array; // Optional for graceful migration
+    glyphCount?: number;
   }): void;
 
   public updateViewProj(viewProj: Float32Array): void {

@@ -1,4 +1,4 @@
-import { serializeTreeForGPU } from './buffers';
+import { serializeTreeForGPU, serializeTextForGPU } from './buffers';
 import { Camera } from './camera';
 import { layout } from './layout';
 import { Mouse } from './mouse';
@@ -51,7 +51,12 @@ export class Viewer {
     // Update renderer with the tree data
     if (this.tree && this.renderer) {
       const serializedData = serializeTreeForGPU(root);
-      this.renderer.upload(serializedData);
+      // Load text data asynchronously
+      const textData = await serializeTextForGPU(root);
+      this.renderer.upload({
+        ...serializedData,
+        ...textData
+      });
     }
     this.updateSize();
   }

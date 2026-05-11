@@ -1,6 +1,15 @@
 import { FlextreeNode } from 'd3-flextree';
-import { Node } from './types';
-import { LINK_STRIDE, NODE_STRIDE } from './constants';
+import { Node, TextAtlas, GlyphMetrics } from './types';
+import {
+  LINK_STRIDE,
+  NODE_STRIDE,
+  TEXT_GLYPH_STRIDE,
+  PROPOSITION_ID_COLOR,
+  PROPOSITION_TEXT_COLOR,
+  PROPOSITION_ID_SCALE,
+  LINE_HEIGHT,
+  ID_OFFSET
+} from './constants';
 
 type TreeNode = FlextreeNode<Node>;
 
@@ -147,4 +156,118 @@ function getColor(node: Node) {
   }
 
   return { r: r + m, g: g + m, b: b + m, a: 0.5 }; // a = 1.0 for opaque
+}
+
+/**
+ * Serialize text glyphs for GPU rendering from tree data
+ * @param root Root node of the tree
+ * @returns Object containing glyph buffer data and count
+ */
+export async function serializeTextForGPU(root: TreeNode): Promise<{
+  glyphData: Float32Array;
+  glyphCount: number;
+}> {
+  try {
+    // 1. Load text atlas metadata
+    const atlasResponse = await fetch('text-atlas.json');
+    if (!atlasResponse.ok) {
+      console.error('Failed to load text-atlas.json');
+      return { glyphData: new Float32Array(0), glyphCount: 0 };
+    }
+    const atlas: TextAtlas = await atlasResponse.json();
+
+    // 2. Traverse tree, collect all nodes with text
+    const glyphs: number[] = [];
+
+    function traverse(node: TreeNode) {
+      if (node.data.data && node.data.data.content) {
+        const proposition = node.data.data;
+        // Render proposition ID first (to the left, vertically centered)
+        const idGlyphs = layoutText(
+          proposition.id, // e.g., "1.11"
+          node.y - ID_OFFSET, // Position to the left of text block (rotated coords)
+          -node.x! - node.size[0] / 2, // Vertical center (rotated coords)
+          atlas,
+          PROPOSITION_ID_COLOR,
+          PROPOSITION_ID_SCALE
+        );
+        glyphs.push(...idGlyphs);
+
+        // Render proposition content (fixed width layout)
+        const contentGlyphs = layoutText(
+          proposition.content,
+          node.y,
+          -node.x! - node.size[0] / 2,
+          atlas,
+          PROPOSITION_TEXT_COLOR,
+          1.0, // Normal scale
+          proposition.width // Fixed width for wrapping
+        );
+        glyphs.push(...contentGlyphs);
+      }
+
+      node.children?.forEach(traverse);
+    }
+
+    traverse(root);
+
+    return {
+      glyphData: new Float32Array(glyphs),
+      glyphCount: glyphs.length / TEXT_GLYPH_STRIDE
+    };
+  } catch (error) {
+    console.error('Error serializing text for GPU:', error);
+    return { glyphData: new Float32Array(0), glyphCount: 0 };
+  }
+}
+
+function layoutText(
+  text: string,
+  x: number,
+  y: number,
+  atlas: TextAtlas,
+  color: readonly number[],
+  scale: number,
+  maxWidth?: number
+): number[] {
+  const glyphs: number[] = [];
+  let cursorX = x;
+  let cursorY = y;
+
+  // Simple left-to-right layout
+  // TODO: Handle line breaks with maxWidth (use tex-linebreak library if available)
+  for (const char of text) {
+    if (char === '\n') {
+      cursorX = x;
+      cursorY += LINE_HEIGHT * scale;
+      continue;
+    }
+
+    const metrics = atlas.glyphs[char];
+    if (!metrics) {
+      console.warn(`Glyph not found in atlas: ${char}`);
+      continue;
+    }
+
+    // Serialize glyph instance data (matches GlyphData struct in shader)
+    glyphs.push(
+      cursorX + metrics.bearingX * scale, // posX
+      cursorY + metrics.bearingY * scale, // posY
+      metrics.x / atlas.width, // atlasPosX (normalized)
+      metrics.y / atlas.height, // atlasPosY (normalized)
+      metrics.width / atlas.width, // atlasSizeX (normalized)
+      metrics.height / atlas.height, // atlasSizeY (normalized)
+      metrics.width * scale, // glyphSizeX (world space)
+      metrics.height * scale, // glyphSizeY (world space)
+      ...color, // colorR, colorG, colorB, colorA
+      0,
+      0,
+      0,
+      0 // padding for alignment
+    );
+
+    cursorX += metrics.advance * scale;
+  }
+
+  return glyphs;
 }
