@@ -10,10 +10,10 @@ export const SEGMENT_COUNT = 80;
 export const VERTICES_PER_EDGE = (SEGMENT_COUNT + 1) * 2;
 
 // Text rendering constants
-export const TEXT_GLYPH_STRIDE = 16; // floats per glyph instance
+export const TEXT_GLYPH_STRIDE = 12; // floats per glyph instance
 // [posX, posY, atlasPosX, atlasPosY, atlasSizeX, atlasSizeY, glyphSizeX, glyphSizeY,
-//  colorR, colorG, colorB, colorA, padding1, padding2, padding3, padding4]
-// (16 floats for alignment, WebGPU prefers 16-byte aligned structs)
+//  colorR, colorG, colorB, colorA]
+// (12 floats = 48 bytes, matches WGSL GlyphData struct layout)
 
 export const PROPOSITION_ID_COLOR = [0.2, 0.2, 0.2, 1.0] as const; // Dark gray for IDs
 export const PROPOSITION_TEXT_COLOR = [0.1, 0.1, 0.1, 1.0] as const; // Near-black for text

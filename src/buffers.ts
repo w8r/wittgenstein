@@ -304,11 +304,7 @@ export function layoutText(
           metrics.height / atlas.height, // atlasSizeY (normalized)
           metrics.width * scale, // glyphSizeX (world space)
           metrics.height * scale, // glyphSizeY (world space)
-          ...color, // colorR, colorG, colorB, colorA
-          0,
-          0,
-          0,
-          0 // padding for alignment
+          ...color // colorR, colorG, colorB, colorA
         );
 
         cursorX += metrics.advance * scale;
@@ -354,11 +350,7 @@ export function layoutText(
         metrics.height / atlas.height, // atlasSizeY (normalized)
         metrics.width * scale, // glyphSizeX (world space)
         metrics.height * scale, // glyphSizeY (world space)
-        ...color, // colorR, colorG, colorB, colorA
-        0,
-        0,
-        0,
-        0 // padding for alignment
+        ...color // colorR, colorG, colorB, colorA
       );
 
       cursorX += metrics.advance * scale;
