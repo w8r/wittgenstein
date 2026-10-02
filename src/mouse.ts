@@ -2,10 +2,24 @@ import { Camera } from './camera';
 import { EventEmitter } from 'eventemitter3';
 import { Point } from './types';
 
-export class Mouse extends EventEmitter<{ update: [] }> {
+/** Pointer travel (CSS px) below which a press counts as a click, not a drag */
+const CLICK_TOLERANCE = 4;
+
+export class Mouse extends EventEmitter<{
+  /** Camera moved or zoomed by the user */
+  update: [];
+  /** User started moving the camera (cancels camera animations) */
+  interact: [];
+  /** Pointer moved over the canvas (null when it left) */
+  hover: [Point | null];
+  click: [Point];
+}> {
   private isDragging = false;
   private lastMouseX = 0;
   private lastMouseY = 0;
+  private downX = 0;
+  private downY = 0;
+  private moved = false;
   private rect!: DOMRect;
   private devicePixelRatio: number = window.devicePixelRatio || 1;
 
@@ -26,6 +40,7 @@ export class Mouse extends EventEmitter<{ update: [] }> {
 
   private updateRect = () => {
     this.rect = this.canvas.getBoundingClientRect();
+    this.devicePixelRatio = window.devicePixelRatio || 1;
     this.updateCameraDimensions();
   };
 
@@ -33,7 +48,7 @@ export class Mouse extends EventEmitter<{ update: [] }> {
     this.canvas.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mousemove', this.onMouseMove);
     window.addEventListener('mouseup', this.onMouseUp);
-    //this.canvas.addEventListener('mouseleave', this.onMouseUp);
+    this.canvas.addEventListener('mouseleave', this.onMouseLeave);
     this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
   }
 
@@ -53,17 +68,32 @@ export class Mouse extends EventEmitter<{ update: [] }> {
 
   private onMouseDown = (event: MouseEvent) => {
     this.isDragging = true;
+    this.moved = false;
     this.setXY(event);
-    this.canvas.style.cursor = 'grabbing';
+    this.downX = this.lastMouseX;
+    this.downY = this.lastMouseY;
   };
 
   private onMouseMove = (event: MouseEvent) => {
+    const { x, y } = this.getCanvasPosition(event);
+
     if (!this.isDragging) {
       this.setXY(event);
+      if (event.target === this.canvas) this.emit('hover', { x, y });
       return;
     }
 
-    const { x, y } = this.getCanvasPosition(event);
+    if (
+      !this.moved &&
+      Math.hypot(x - this.downX, y - this.downY) < CLICK_TOLERANCE
+    ) {
+      return;
+    }
+    if (!this.moved) {
+      this.moved = true;
+      this.canvas.style.cursor = 'grabbing';
+      this.emit('interact');
+    }
 
     const dx = x - this.lastMouseX;
     const dy = y - this.lastMouseY;
@@ -74,17 +104,23 @@ export class Mouse extends EventEmitter<{ update: [] }> {
     this.emit('update');
   };
 
-  private onMouseUp = () => {
+  private onMouseUp = (event: MouseEvent) => {
+    if (!this.isDragging) return;
     this.isDragging = false;
-    this.canvas.style.cursor = 'grab';
+    this.canvas.style.cursor = '';
+    if (!this.moved) this.emit('click', this.getCanvasPosition(event));
+  };
+
+  private onMouseLeave = () => {
+    if (!this.isDragging) this.emit('hover', null);
   };
 
   private onWheel = (event: WheelEvent) => {
     event.preventDefault();
+    this.emit('interact');
 
     const { x, y } = this.getCanvasPosition(event);
 
-    // Calculate target zoom using momentum
     const zoomFactor = 1 + event.deltaY * 0.01;
     this.camera.zoomAroundPoint(zoomFactor, x, y);
     this.emit('update');
@@ -92,9 +128,9 @@ export class Mouse extends EventEmitter<{ update: [] }> {
 
   destroy() {
     this.canvas.removeEventListener('mousedown', this.onMouseDown);
-    this.canvas.removeEventListener('mousemove', this.onMouseMove);
-    this.canvas.removeEventListener('mouseup', this.onMouseUp);
-    this.canvas.removeEventListener('mouseleave', this.onMouseUp);
+    window.removeEventListener('mousemove', this.onMouseMove);
+    window.removeEventListener('mouseup', this.onMouseUp);
+    this.canvas.removeEventListener('mouseleave', this.onMouseLeave);
     this.canvas.removeEventListener('wheel', this.onWheel);
     window.removeEventListener('resize', this.updateRect);
   }

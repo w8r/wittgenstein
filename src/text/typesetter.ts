@@ -20,6 +20,9 @@ import {
   type RichInlineItem
 } from '@chenglou/pretext/rich-inline';
 import type { Script, Token } from './latex';
+import type { ProgressCallback } from '../util/yield';
+import AtlasWorker from 'msdfgen-ts/worker?worker';
+import type { BuildRequest, BuiltResponse, ErrorResponse } from 'msdfgen-ts/worker';
 
 const enum FontIndex {
   Slab = 0,
@@ -115,19 +118,25 @@ export interface AtlasTexture {
   pxRange: number;
 }
 
+/** One font's generated atlas: texture plus glyphs in codepoint order */
+interface FontAtlas {
+  width: number;
+  height: number;
+  texture: Uint8Array;
+  glyphs: AtlasGlyph[];
+}
+
 export class Typesetter {
-  private atlases: Atlas[];
+  private fonts: Font[];
   private used: Set<number>[];
   private cache: Map<number, AtlasGlyph>[] = [];
   private rowOffsets: number[] = [];
   private texture?: AtlasTexture;
 
-  constructor(private fonts: Font[]) {
-    this.atlases = fonts.map(
-      (font) =>
-        new Atlas(font, { pixelsPerEm: ATLAS_PX_PER_EM, pxrange: ATLAS_PX_RANGE })
-    );
-    this.used = fonts.map(() => new Set<number>());
+  /** `buffers` are the raw font files, sent to the atlas workers */
+  constructor(private buffers: ArrayBuffer[]) {
+    this.fonts = buffers.map((buffer) => new Font(buffer));
+    this.used = buffers.map(() => new Set<number>());
   }
 
   /** Fetches the font files, registers them for canvas measurement and parses them. */
@@ -146,7 +155,7 @@ export class Typesetter {
         document.fonts.add(face);
       })
     );
-    return new Typesetter(buffers.map((buffer) => new Font(buffer)));
+    return new Typesetter(buffers);
   }
 
   /**
@@ -248,20 +257,34 @@ export class Typesetter {
    * Generates MSDFs for every glyph used so far and stacks the per-font
    * atlases vertically into a single RGBA texture.
    */
-  buildAtlas(): AtlasTexture {
+  async buildAtlas(onProgress?: ProgressCallback): Promise<AtlasTexture> {
+    const total = this.used.reduce((sum, used) => sum + used.size, 0);
+    let done = 0;
+    // One worker per font: atlases are generated in parallel, off the main thread
+    const atlases = await Promise.all(
+      this.fonts.map(async (_, i) => {
+        const codepoints = [...this.used[i]];
+        const atlas = await this.generateInWorker(i, codepoints).catch((error) => {
+          console.warn('Atlas worker failed, generating on the main thread:', error);
+          return this.generate(i, codepoints);
+        });
+        done += codepoints.length;
+        onProgress?.(done / Math.max(total, 1));
+        this.cache[i] = new Map(codepoints.map((cp, j) => [cp, atlas.glyphs[j]]));
+        return atlas;
+      })
+    );
+
     let width = 1;
     let height = 0;
-    this.atlases.forEach((atlas, i) => {
-      const codepoints = [...this.used[i]];
-      const glyphs = atlas.glyphs(codepoints);
-      this.cache[i] = new Map(codepoints.map((cp, j) => [cp, glyphs[j]]));
+    atlases.forEach((atlas, i) => {
       this.rowOffsets[i] = height;
       width = Math.max(width, atlas.width);
       height += atlas.height;
     });
 
     const data = new Uint8Array(width * Math.max(height, 1) * 4);
-    this.atlases.forEach((atlas, i) => {
+    atlases.forEach((atlas, i) => {
       const src = atlas.texture;
       const rowBytes = atlas.width * 4;
       for (let row = 0; row < atlas.height; row++) {
@@ -274,6 +297,55 @@ export class Typesetter {
 
     this.texture = { data, width, height: Math.max(height, 1), pxRange: ATLAS_PX_RANGE };
     return this.texture;
+  }
+
+  /** Generates one font's atlas in a msdfgen-ts worker */
+  private generateInWorker(font: number, codepoints: number[]): Promise<FontAtlas> {
+    if (!codepoints.length) return Promise.resolve(this.generate(font, codepoints));
+    return new Promise((resolve, reject) => {
+      const worker = new AtlasWorker();
+      worker.onmessage = (event: MessageEvent<BuiltResponse | ErrorResponse>) => {
+        worker.terminate();
+        const message = event.data;
+        if (message.type === 'error') {
+          reject(new Error(message.message));
+          return;
+        }
+        resolve({
+          width: message.width,
+          height: message.height,
+          texture: new Uint8Array(message.texture),
+          // One laid-out glyph per codepoint of the requested text, in order
+          glyphs: message.glyphs
+        });
+      };
+      worker.onerror = (event) => {
+        worker.terminate();
+        reject(event);
+      };
+      const bytes = this.buffers[font].slice(0);
+      const request: BuildRequest = {
+        type: 'build',
+        id: font,
+        fontKey: FONT_FILES[font].url,
+        font: bytes,
+        pixelsPerEm: ATLAS_PX_PER_EM,
+        pxrange: ATLAS_PX_RANGE,
+        text: String.fromCodePoint(...codepoints)
+      };
+      worker.postMessage(request, [bytes]);
+    });
+  }
+
+  /** Generates one font's atlas on the main thread (fallback) */
+  private generate(font: number, codepoints: number[]): FontAtlas {
+    const atlas = new Atlas(this.fonts[font], {
+      pixelsPerEm: ATLAS_PX_PER_EM,
+      pxrange: ATLAS_PX_RANGE
+    });
+    const glyphs = atlas.glyphs(codepoints);
+    if (!codepoints.length) return { width: 0, height: 0, texture: new Uint8Array(0), glyphs };
+    return { width: atlas.width, height: atlas.height, texture: atlas.texture, glyphs };
   }
 
   /**

@@ -36,3 +36,6 @@ export interface Node {
 }
 
 export type Point = { x: number; y: number };
+
+/** Axis-aligned world-space rectangle; (x, y) is the bottom-left corner. */
+export type Rect = { x: number; y: number; width: number; height: number };

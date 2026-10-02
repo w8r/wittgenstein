@@ -56,18 +56,27 @@ export class Camera {
     );
   }
 
-  getScale() {
-    return (this.zoom * Math.min(this.width, this.height)) / 2;
+  /** Converts canvas CSS pixel coordinates to world coordinates. */
+  screenToWorld(screenX: number, screenY: number): Point {
+    return {
+      x: this.position.x + (screenX - this.width / 2) * this.zoom,
+      y: this.position.y - (screenY - this.height / 2) * this.zoom
+    };
   }
 
-  getViewProjMatrix(aspect: number): Float32Array<ArrayBuffer> {
-    const scale = this.getScale();
+  /**
+   * View-projection matrix: one world unit spans 1 / zoom CSS pixels in both
+   * directions, matching `screenToWorld` in landscape and portrait alike.
+   */
+  getViewProjMatrix(): Float32Array<ArrayBuffer> {
+    const sx = 2 / (this.zoom * Math.max(this.width, 1));
+    const sy = 2 / (this.zoom * Math.max(this.height, 1));
     // prettier-ignore
     return new Float32Array([
-      1 / (scale * aspect),                                       0, 0, 0,
-      0,                                                  1 / scale, 0, 0,
-      0,                                                          0, 1, 0,
-      -this.position.x / (scale * aspect), -this.position.y / scale, 0, 1
+      sx,                     0,                      0, 0,
+      0,                      sy,                     0, 0,
+      0,                      0,                      1, 0,
+      -this.position.x * sx,  -this.position.y * sy,  0, 1
     ]);
   }
 

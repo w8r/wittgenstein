@@ -14,6 +14,7 @@ import {
 } from './constants';
 import { parseLatex } from './text/latex';
 import { Typesetter } from './text/typesetter';
+import { createYielder, type ProgressCallback } from './util/yield';
 
 /** Visits every node of the tree, including collapsed branches. */
 export function forEachNode(root: Node, fn: (node: Node) => void) {
@@ -29,21 +30,32 @@ export function forEachNode(root: Node, fn: (node: Node) => void) {
  * Typesets every proposition (content and ID). Must run before
  * `typesetter.buildAtlas()` and `layout()`.
  */
-export function typesetTree(root: Node, typesetter: Typesetter) {
+export async function typesetTree(
+  root: Node,
+  typesetter: Typesetter,
+  onProgress?: ProgressCallback
+) {
+  const nodes: Node[] = [];
   forEachNode(root, (node) => {
-    if (!node.data?.content) return;
+    if (node.data?.content) nodes.push(node);
+  });
+  const yieldToBrowser = createYielder();
+  for (const [i, node] of nodes.entries()) {
+    const data = node.data!;
     node.text = {
       content: typesetter.layout(
-        parseLatex(node.data.content),
+        parseLatex(data.content),
         TEXT_FONT_SIZE,
         FIXED_TEXT_WIDTH
       ),
       id: typesetter.layout(
-        [{ type: 'text', text: node.data.id, italic: false, script: 0, math: false }],
+        [{ type: 'text', text: data.id, italic: false, script: 0, math: false }],
         ID_FONT_SIZE
       )
     };
-  });
+    onProgress?.((i + 1) / nodes.length);
+    await yieldToBrowser();
+  }
 }
 
 /**
@@ -74,6 +86,11 @@ export function layout(data: Node) {
       node.height = EMPTY_NODE_SIZE;
     }
     depthMap[node.depth] = Math.max(depthMap[node.depth] || 0, node.width);
+  });
+
+  // All boxes of a column share its width, for a steady reading rhythm
+  forEachNode(data, (node) => {
+    if (node.text) node.width = depthMap[node.depth];
   });
 
   const layout = flextree<Node>({

@@ -1,5 +1,5 @@
 import { FlextreeNode } from 'd3-flextree';
-import { Node } from './types';
+import { Node, Rect } from './types';
 import {
   ID_GAP,
   LINK_STRIDE,
@@ -14,23 +14,24 @@ import { TextBlock, Typesetter } from './text/typesetter';
 
 type TreeNode = FlextreeNode<Node>;
 
-/** Collects the laid-out nodes in depth-first order. */
-function collectNodes(root: TreeNode): TreeNode[] {
-  const nodes: TreeNode[] = [];
-  const stack: TreeNode[] = [root];
-  while (stack.length) {
-    const node = stack.pop()!;
-    nodes.push(node);
-    if (node.children) stack.push(...node.children);
-  }
-  return nodes;
+/** Node visual state flags (bit field) */
+export const NODE_HOVERED = 1;
+export const NODE_SELECTED = 2;
+
+/** A node as currently displayed (possibly mid-animation). */
+export interface DrawNode {
+  node: Node;
+  rect: Rect;
+  alpha: number;
+  /** NODE_HOVERED | NODE_SELECTED */
+  state: number;
 }
 
 /**
  * World-space rectangle of a laid-out node. The layout is rotated 90º CW:
  * tree depth runs along +x, siblings along -y. (x, y) is the bottom-left corner.
  */
-export function nodeRect(node: TreeNode) {
+export function nodeRect(node: TreeNode): Rect {
   const height = node.size[0];
   return {
     x: node.y,
@@ -41,57 +42,63 @@ export function nodeRect(node: TreeNode) {
 }
 
 /**
- * Serialize tree nodes into a flat buffer for WebGPU
- * @param root Root node of the tree
- * @returns Object containing buffer data and counts
+ * Serialize displayed nodes into a flat buffer for WebGPU
+ * Format: [x, y, width, height, isCollapsed, state, padding, padding, r, g, b, a] × nodeCount
  */
-export function serializeTreeForGPU(root: TreeNode): {
+export function serializeNodes(nodes: DrawNode[]): {
   nodeData: Float32Array<ArrayBuffer>;
   nodeCount: number;
-  linkData: Float32Array<ArrayBuffer>;
-  linkCount: number;
 } {
-  const nodes = collectNodes(root);
-  const links = nodes.flatMap((source) =>
-    (source.children || []).map((target) => ({ source, target }))
-  );
-
-  // Create node buffer
-  // Format: [x, y, width, height, isCollapsed, hasFormula, padding1, padding2, r, g, b, a] × nodeCount
   const nodeData = new Float32Array(nodes.length * NODE_STRIDE);
 
-  nodes.forEach((node, i) => {
-    const rect = nodeRect(node);
+  nodes.forEach(({ node, rect, alpha, state }, i) => {
     const offset = i * NODE_STRIDE;
     nodeData[offset] = rect.x;
     nodeData[offset + 1] = rect.y;
     nodeData[offset + 2] = rect.width;
     nodeData[offset + 3] = rect.height;
-    nodeData[offset + 4] = node.data.collapsed ? 1 : 0;
-    nodeData[offset + 5] = 0; // hasFormula (unused)
-    nodeData[offset + 6] = 0; // padding
-    nodeData[offset + 7] = 0; // padding
+    // Collapsed marker only when there is something hidden
+    nodeData[offset + 4] = node.collapsed && node.children?.length ? 1 : 0;
+    nodeData[offset + 5] = state;
 
-    const { r, g, b, a } = getColor(node.data);
+    const { r, g, b, a } = getColor(node);
 
     nodeData[offset + 8] = r;
     nodeData[offset + 9] = g;
     nodeData[offset + 10] = b;
-    nodeData[offset + 11] = a;
+    nodeData[offset + 11] = a * alpha;
   });
 
-  // Create link buffer
-  // Format: [sourceX, sourceY, targetX, targetY, controlPoint1X, controlPoint1Y, controlPoint2X, controlPoint2Y, r, g, b, a] × linkCount
-  const linkData = new Float32Array(links.length * LINK_STRIDE);
+  return { nodeData, nodeCount: nodes.length };
+}
 
-  links.forEach(({ source, target }, i) => {
+/**
+ * Serialize links between displayed nodes and their displayed parents.
+ * Format: [sourceX, sourceY, targetX, targetY, cp1X, cp1Y, cp2X, cp2Y, r, g, b, a] × linkCount
+ */
+export function serializeLinks(
+  nodes: DrawNode[],
+  parentOf: Map<Node, Node>
+): {
+  linkData: Float32Array<ArrayBuffer>;
+  linkCount: number;
+} {
+  const byNode = new Map(nodes.map((d) => [d.node, d]));
+  const links: [DrawNode, DrawNode][] = [];
+  for (const child of nodes) {
+    const parent = byNode.get(parentOf.get(child.node)!);
+    if (parent) links.push([parent, child]);
+  }
+
+  const linkData = new Float32Array(links.length * LINK_STRIDE);
+  links.forEach(([source, target], i) => {
     const offset = i * LINK_STRIDE;
 
     // From the middle of the parent's right edge to the middle of the child's left edge
-    const sourceX = source.y + source.data.width;
-    const sourceY = -source.x;
-    const targetX = target.y;
-    const targetY = -target.x;
+    const sourceX = source.rect.x + source.rect.width;
+    const sourceY = source.rect.y + source.rect.height / 2;
+    const targetX = target.rect.x;
+    const targetY = target.rect.y + target.rect.height / 2;
 
     // Horizontal tangents at both ends
     const midX = (sourceX + targetX) / 2;
@@ -108,15 +115,10 @@ export function serializeTreeForGPU(root: TreeNode): {
     linkData[offset + 8] = 0.45; // r
     linkData[offset + 9] = 0.45; // g
     linkData[offset + 10] = 0.45; // b
-    linkData[offset + 11] = 0.9; // a
+    linkData[offset + 11] = 0.9 * target.alpha; // a
   });
 
-  return {
-    nodeData,
-    nodeCount: nodes.length,
-    linkData,
-    linkCount: links.length
-  };
+  return { linkData, linkCount: links.length };
 }
 
 function getColor(node: Node) {
@@ -161,16 +163,12 @@ function getColor(node: Node) {
 }
 
 /**
- * Serialize the typeset text of all laid-out nodes into glyph instances.
- * `typesetter.buildAtlas()` must have been called.
+ * Glyph instances of a node's text relative to the node's bottom-left
+ * corner. Node sizes never change, so these can be cached per node.
  */
-export function serializeTextForGPU(
-  root: TreeNode,
-  typesetter: Typesetter
-): {
-  glyphData: Float32Array<ArrayBuffer>;
-  glyphCount: number;
-} {
+export function nodeGlyphs(node: Node, typesetter: Typesetter): Float32Array {
+  const text = node.text;
+  if (!text) return new Float32Array(0);
   const glyphs: number[] = [];
 
   const pushBlock = (
@@ -185,25 +183,43 @@ export function serializeTextForGPU(
     }
   };
 
-  for (const node of collectNodes(root)) {
-    const text = node.data.text;
-    if (!text) continue;
-    const rect = nodeRect(node);
-    const left = rect.x + PADDING_X;
-    const top = rect.y + rect.height - PADDING_Y;
+  const left = PADDING_X;
+  const top = node.height - PADDING_Y;
 
-    // ID and content are both vertically centered in the node
-    const inner = rect.height - PADDING_Y * 2;
-    const idTop = top - (inner - text.id.height) / 2;
-    pushBlock(text.id, left, idTop, PROPOSITION_ID_COLOR);
+  // ID and content are both vertically centered in the node
+  const inner = node.height - PADDING_Y * 2;
+  pushBlock(text.id, left, top - (inner - text.id.height) / 2, PROPOSITION_ID_COLOR);
 
-    const contentLeft = left + (node.data.idColumnWidth ?? 0) + ID_GAP;
-    const contentTop = top - (inner - text.content.height) / 2;
-    pushBlock(text.content, contentLeft, contentTop, PROPOSITION_TEXT_COLOR);
+  const contentLeft = left + (node.idColumnWidth ?? 0) + ID_GAP;
+  const contentTop = top - (inner - text.content.height) / 2;
+  pushBlock(text.content, contentLeft, contentTop, PROPOSITION_TEXT_COLOR);
+
+  return new Float32Array(glyphs);
+}
+
+/** Serialize the text of displayed nodes from their cached local glyphs. */
+export function serializeText(
+  nodes: DrawNode[],
+  glyphsOf: (node: Node) => Float32Array
+): {
+  glyphData: Float32Array<ArrayBuffer>;
+  glyphCount: number;
+} {
+  let length = 0;
+  for (const { node } of nodes) length += glyphsOf(node).length;
+
+  const glyphData = new Float32Array(length);
+  let offset = 0;
+  for (const { node, rect, alpha } of nodes) {
+    const local = glyphsOf(node);
+    glyphData.set(local, offset);
+    for (let i = offset; i < offset + local.length; i += TEXT_GLYPH_STRIDE) {
+      glyphData[i] += rect.x;
+      glyphData[i + 1] += rect.y;
+      glyphData[i + 11] *= alpha;
+    }
+    offset += local.length;
   }
 
-  return {
-    glyphData: new Float32Array(glyphs),
-    glyphCount: glyphs.length / TEXT_GLYPH_STRIDE
-  };
+  return { glyphData, glyphCount: length / TEXT_GLYPH_STRIDE };
 }

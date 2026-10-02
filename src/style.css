@@ -21,8 +21,71 @@ html {
   position: absolute;
   bottom: 20px;
   right: 20px;
+  text-align: right;
   text-decoration: underline;
   cursor: pointer;
+  user-select: none;
+}
+
+/* White halo keeps overlay text readable on top of the tree */
+header,
+.controls {
+  text-shadow:
+    0 0 2px #fff,
+    0 0 4px #fff,
+    0 0 6px #fff,
+    1px 1px 0 #fff,
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff;
+}
+
+.link-control {
+  padding: 2px 0;
+}
+
+.link-control:hover {
+  text-shadow:
+    0 0 3px #fff,
+    0 0 6px #fff,
+    0 0 10px #fff,
+    2px 2px 0 #fff,
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff;
+}
+
+#loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #fff;
+  font-weight: 300;
+  transition: opacity 0.4s ease;
+}
+
+#loader.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader-bar {
+  width: min(320px, 60vw);
+  height: 2px;
+  background: #e6e6e6;
+  overflow: hidden;
+}
+
+.loader-fill {
+  height: 100%;
+  background: #222;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease-out;
 }
 
 a,
@@ -39,6 +102,12 @@ header {
   position: absolute;
   top: 10px;
   left: 50px;
+  /* Let clicks through to the canvas, except on the link */
+  pointer-events: none;
+}
+
+header a {
+  pointer-events: auto;
 }
 
 header h2 {

@@ -2,7 +2,6 @@
 <html>
   <head>
     <title>Ludwig Wittgenstein - Tractatus Logico-Philosophicus</title>
-    <link href="dist/style.css" rel="stylesheet" type="text/css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;900&display=swap"
       rel="stylesheet"
@@ -20,6 +19,15 @@
       </h2>
     </header>
     <canvas id="canvas"></canvas>
+    <div class="controls">
+      <div class="link-control" data-action="expand-all">expand all</div>
+      <div class="link-control" data-action="collapse-all">collapse all</div>
+      <div class="link-control" data-action="center">center</div>
+    </div>
+    <div id="loader">
+      <div class="loader-label">Loading</div>
+      <div class="loader-bar"><div class="loader-fill"></div></div>
+    </div>
     <script src="src/main.ts" type="module"></script>
   </body>
 </html>
