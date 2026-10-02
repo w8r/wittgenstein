@@ -118,3 +118,8 @@ header h2 {
 header h2 a {
   color: black;
 }
+
+/* The language switch sits apart from the tree controls */
+.link-control[data-action='language'] {
+  margin-bottom: 10px;
+}

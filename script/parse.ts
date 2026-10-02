@@ -40,9 +40,16 @@ const fileContent = readFileSync(path.join(process.cwd(), fileName), 'utf-8');
  * @returns {Object} - The root of the tree and the radix tree
  */
 function parse(texContent: string) {
-  const matches = parseTeXPropositions(texContent);
+  const matches = parseTeXPropositions(texContent, 'PropositionE');
+  // The German original, matched to the English translation by id
+  const german = new Map(
+    parseTeXPropositions(texContent, 'PropositionG').map((p) => [p.id, p.content])
+  );
   for (const prop of matches) {
     Object.assign(prop, estimateBox(prop.content));
+    const contentDe = german.get(prop.id);
+    if (contentDe) prop.contentDe = contentDe;
+    else console.warn(`No German text for proposition ${prop.id}`);
   }
 
   // Create the radix tree
@@ -118,11 +125,14 @@ writeFileSync(
  * @param texContent The raw TeX content to parse
  * @returns Array of parsed proposition objects
  */
-function parseTeXPropositions(texContent: string): Proposition[] {
+function parseTeXPropositions(
+  texContent: string,
+  macro: 'PropositionE' | 'PropositionG'
+): Proposition[] {
   const propositions: Proposition[] = [];
 
-  // Pattern to match \PropositionE and the opening brace of its first argument
-  const propStartPattern = /\\PropositionE\s*\{/g;
+  // Pattern to match the macro and the opening brace of its first argument
+  const propStartPattern = new RegExp(`\\\\${macro}\\s*\\{`, 'g');
 
   // Function to find the matching closing brace for a given position
   function findClosingBrace(text: string, startPos: number): number {
@@ -166,7 +176,7 @@ function parseTeXPropositions(texContent: string): Proposition[] {
     const content = texContent.substring(titleStartPos + 1, titleEndPos).trim();
 
     // Find the content up to the next proposition or end of text
-    const nextPropPos = texContent.indexOf('\\PropositionE', titleEndPos + 1);
+    const nextPropPos = texContent.indexOf(`\\${macro}`, titleEndPos + 1);
     const contentEndPos = nextPropPos !== -1 ? nextPropPos : texContent.length;
 
     // Extract the content (everything after the title's closing brace up to next proposition)

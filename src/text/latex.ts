@@ -69,12 +69,34 @@ const SYMBOLS: Record<string, string> = {
   IdEst: 'I.e.',
   exempliGratia: 'e.g.',
   ExempliGratia: 'E.g.',
-  DittoInWords: '〃'
+  DittoInWords: '〃',
+  // German original
+  glqq: '„',
+  grqq: '“',
+  glq: '‚',
+  grq: '‘',
+  quotedblbase: '„',
+  Wahr: 'W',
+  False: 'F',
+  zumBeispiel: 'z.\u00a0B.',
+  ZumBeispiel: 'Z.\u00a0B.',
+  dasHeiszt: 'd.\u00a0h.',
+  undSoFort: 'u.\u00a0s.\u00a0f.',
+  UndSoWeiter: 'U.\u00a0s.\u00a0w.',
+  undAndere: 'u.\u00a0a.',
+  DittoInWorten: '〃'
 };
 
 /** Commands rendered as their (single) argument, optionally italic. */
-const PASS_THROUGH = new Set(['text', 'mbox', 'textrm', 'smash', 'PropERef']);
-const ITALIC = new Set(['emph', 'textit', 'BookTitle']);
+const PASS_THROUGH = new Set([
+  'text',
+  'mbox',
+  'textrm',
+  'smash',
+  'PropERef',
+  'PropGRef'
+]);
+const ITALIC = new Set(['emph', 'textit', 'BookTitle', 'Emph', 'EmphPart']);
 
 /** Commands whose arguments are discarded entirely. */
 const DROP_WITH_ARG = new Set([
@@ -435,6 +457,12 @@ class Parser {
       }
       case 'DPtypo':
         // \DPtypo{original}{corrected} — show the corrected text
+        this.readRawArg();
+        this.parseArg(style);
+        return;
+      case 'discretionary':
+        // \discretionary{pre-break}{post-break}{no-break}
+        this.readRawArg();
         this.readRawArg();
         this.parseArg(style);
         return;

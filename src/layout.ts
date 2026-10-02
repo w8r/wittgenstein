@@ -1,5 +1,5 @@
 import { flextree } from 'd3-flextree';
-import { Node } from './types';
+import { Language, Node } from './types';
 import {
   EMPTY_NODE_SIZE,
   FIXED_TEXT_WIDTH,
@@ -52,6 +52,7 @@ export function removePlaceholders(root: Node) {
 export async function typesetTree(
   root: Node,
   typesetter: Typesetter,
+  language: Language,
   onProgress?: ProgressCallback
 ) {
   const nodes: Node[] = [];
@@ -61,20 +62,27 @@ export async function typesetTree(
   const yieldToBrowser = createYielder();
   for (const [i, node] of nodes.entries()) {
     const data = node.data!;
-    node.text = {
-      content: typesetter.layout(
-        parseLatex(data.content),
-        TEXT_FONT_SIZE,
-        FIXED_TEXT_WIDTH
-      ),
-      id: typesetter.layout(
-        [{ type: 'text', text: data.id, italic: false, script: 0, math: false }],
-        ID_FONT_SIZE
-      )
+    const id = typesetter.layout(
+      [{ type: 'text', text: data.id, italic: false, script: 0, math: false }],
+      ID_FONT_SIZE
+    );
+    const typeset = (source: string) =>
+      typesetter.layout(parseLatex(source), TEXT_FONT_SIZE, FIXED_TEXT_WIDTH);
+    node.texts = {
+      en: { id, content: typeset(data.content) },
+      de: { id, content: typeset(data.contentDe ?? data.content) }
     };
+    node.text = node.texts[language];
     onProgress?.((i + 1) / nodes.length);
     await yieldToBrowser();
   }
+}
+
+/** Switches every node to its text in `language` */
+export function setTreeLanguage(root: Node, language: Language) {
+  forEachNode(root, (node) => {
+    if (node.texts) node.text = node.texts[language];
+  });
 }
 
 /**

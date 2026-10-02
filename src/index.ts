@@ -11,11 +11,17 @@ import {
   serializeText
 } from './buffers';
 import { Camera } from './camera';
-import { forEachNode, layout, removePlaceholders, typesetTree } from './layout';
+import {
+  forEachNode,
+  layout,
+  removePlaceholders,
+  setTreeLanguage,
+  typesetTree
+} from './layout';
 import { Mouse } from './mouse';
 import { Renderer } from './renderer/webgpu';
 import { Typesetter } from './text/typesetter';
-import { Node, Point, Rect } from './types';
+import { Language, Node, Point, Rect } from './types';
 
 /** Duration of layout transitions (collapse/expand) */
 const LAYOUT_TRANSITION_MS = 450;
@@ -32,7 +38,12 @@ const MIN_FOCUS_ZOOM = 0.6;
 const MARKER_FONT_SIZE = 18;
 const MARKER_COLOR = [0.45, 0.45, 0.45, 1] as const;
 
+/** Selections within this interval share one browser history entry */
+const HISTORY_COALESCE_MS = 1000;
+
 export interface ViewerOptions {
+  /** Initial language of the propositions (default: English) */
+  language?: Language;
   /** Loading progress, 0..1, with a short description of the current step */
   onProgress?: (fraction: number, label: string) => void;
 }
@@ -81,6 +92,7 @@ export class Viewer {
 
   private cameraTween?: { from: CameraState; to: CameraState; start: number };
 
+  private language: Language;
   private hovered: Node | null = null;
   private selected: Node | null = null;
 
@@ -88,6 +100,7 @@ export class Viewer {
     private canvas: HTMLCanvasElement,
     private options: ViewerOptions = {}
   ) {
+    this.language = options.language ?? 'en';
     this.mouse = new Mouse(canvas, this.camera);
     this.mouse.on('update', this.requestRedraw);
     this.mouse.on('interact', () => (this.cameraTween = undefined));
@@ -131,7 +144,7 @@ export class Viewer {
     // Typeset all propositions, then generate the glyph atlas once
     if (typesetter) {
       this.progress(0.1, 'Typesetting propositions');
-      await typesetTree(tree, typesetter, (f) =>
+      await typesetTree(tree, typesetter, this.language, (f) =>
         this.progress(0.1 + 0.4 * f, 'Typesetting propositions')
       );
       // "›" after collapsed propositions
@@ -157,13 +170,8 @@ export class Viewer {
     this.collapseBelowTop();
 
     // Optionally open on the proposition named in the URL hash (e.g. #4.1252)
-    const focusId = decodeURIComponent(location.hash.slice(1));
-    const focus = focusId ? this.findProposition(focusId) : null;
-    if (focus) {
-      for (let n = this.parentOf.get(focus); n; n = this.parentOf.get(n)) {
-        n.collapsed = false;
-      }
-    }
+    const focus = this.propositionFromUrl();
+    if (focus) this.reveal(focus);
 
     this.relayout(this.tree, false);
     this.updateSize();
@@ -175,6 +183,59 @@ export class Viewer {
     }
     this.progress(1, '');
     this.requestRedraw();
+    window.addEventListener('popstate', this.onUrlChange);
+    window.addEventListener('hashchange', this.onUrlChange);
+  }
+
+  // --- URL navigation ------------------------------------------------------
+
+  /** The proposition named in the URL hash, e.g. #4.1252 */
+  private propositionFromUrl(): Node | null {
+    const id = decodeURIComponent(location.hash.slice(1));
+    return id ? this.findProposition(id) : null;
+  }
+
+  /** Expands all ancestors of a node; returns whether anything changed */
+  private reveal(node: Node): boolean {
+    let changed = false;
+    for (let n = this.parentOf.get(node); n; n = this.parentOf.get(n)) {
+      if (n.collapsed) {
+        n.collapsed = false;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  /** Browser back/forward or an edited hash: navigate to that proposition */
+  private onUrlChange = () => {
+    const node = this.propositionFromUrl();
+    if (node === this.selected) return;
+    if (!node) {
+      this.select(null, false);
+      this.center();
+      return;
+    }
+    if (this.reveal(node)) this.relayout(this.selected ?? this.tree);
+    this.select(node, false);
+  };
+
+  /**
+   * Mirrors the selection in the URL hash. Steps in quick succession (e.g.
+   * arrow keys) replace the history entry instead of adding one each.
+   */
+  private lastHistoryPush = 0;
+  private updateUrl(node: Node | null) {
+    const hash = node?.data ? `#${node.data.id}` : '';
+    if (location.hash === hash) return;
+    const url = `${location.pathname}${location.search}${hash}`;
+    const now = performance.now();
+    if (now - this.lastHistoryPush < HISTORY_COALESCE_MS) {
+      history.replaceState(null, '', url);
+    } else {
+      history.pushState(null, '', url);
+    }
+    this.lastHistoryPush = now;
   }
 
   // --- Public controls ----------------------------------------------------
@@ -193,6 +254,17 @@ export class Viewer {
     this.collapseBelowTop();
     this.relayout(this.tree);
     this.center();
+  }
+
+  /** Switches the propositions between the English translation and the German original */
+  setLanguage(language: Language) {
+    if (language === this.language) return;
+    this.language = language;
+    if (!this.tree) return;
+    setTreeLanguage(this.tree, language);
+    this.glyphCache.clear();
+    this.relayout(this.selected ?? this.tree);
+    if (this.selected) this.moveCamera(this.focusTarget(this.selected));
   }
 
   /** Frames the whole visible tree */
@@ -294,7 +366,10 @@ export class Viewer {
     this.targets = targets;
     this.transitionStart = animate ? now : -Infinity;
     if (this.hovered && !targets.has(this.hovered)) this.hovered = null;
-    if (this.selected && !targets.has(this.selected)) this.selected = null;
+    if (this.selected && !targets.has(this.selected)) {
+      this.selected = null;
+      history.replaceState(null, '', `${location.pathname}${location.search}`);
+    }
     this.dirty = true;
     this.requestRedraw();
   }
@@ -394,9 +469,10 @@ export class Viewer {
   };
 
   /** Selects a node (or clears the selection) and focuses the camera on it */
-  select(node: Node | null) {
+  select(node: Node | null, updateUrl = true) {
     this.selected = node;
     this.dirty = true;
+    if (updateUrl) this.updateUrl(node);
     if (node) this.moveCamera(this.focusTarget(node));
     this.requestRedraw();
   }
@@ -429,7 +505,7 @@ export class Viewer {
       const leftEdge = rect.x - 40 * zoom;
       return {
         x: Math.min(fit.x, leftEdge + (this.camera.width * zoom) / 2),
-        y: rect.y + rect.height / 2,
+        y: rect.y + rect.height / 2 + (this.headerHeight() / 2) * zoom,
         zoom
       };
     }
@@ -571,6 +647,8 @@ export class Viewer {
     this.resizeObserver.disconnect();
     this.mouse.destroy();
     window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('popstate', this.onUrlChange);
+    window.removeEventListener('hashchange', this.onUrlChange);
     cancelAnimationFrame(this.renderFrame);
   }
 }
