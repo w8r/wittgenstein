@@ -33,11 +33,34 @@ export class Camera {
     this.position.y -= dy * this.zoom;
   }
 
+  /** Centers the camera on a world-space rectangle and zooms to fit it. */
+  fitBounds(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+    padding = 1.1
+  ) {
+    this.position.x = (minX + maxX) / 2;
+    this.position.y = (minY + maxY) / 2;
+    // zoom = world units per screen pixel
+    this.zoom = Math.max(
+      this.minZoom,
+      Math.min(
+        this.maxZoom,
+        Math.max(
+          ((maxX - minX) * padding) / Math.max(this.width, 1),
+          ((maxY - minY) * padding) / Math.max(this.height, 1)
+        )
+      )
+    );
+  }
+
   getScale() {
     return (this.zoom * Math.min(this.width, this.height)) / 2;
   }
 
-  getViewProjMatrix(aspect: number): Float32Array {
+  getViewProjMatrix(aspect: number): Float32Array<ArrayBuffer> {
     const scale = this.getScale();
     // prettier-ignore
     return new Float32Array([

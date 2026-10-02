@@ -1,9 +1,10 @@
-import { serializeTreeForGPU, serializeTextForGPU } from './buffers';
+import { nodeRect, serializeTreeForGPU, serializeTextForGPU } from './buffers';
 import { Camera } from './camera';
-import { layout } from './layout';
+import { layout, typesetTree } from './layout';
 import { Mouse } from './mouse';
 import { Renderer } from './renderer/webgpu';
-import { Node, TextAtlas } from './types';
+import { Typesetter } from './text/typesetter';
+import { Node } from './types';
 
 export class Viewer {
   private renderer!: Renderer;
@@ -13,7 +14,7 @@ export class Viewer {
   private renderFrame: number = 0;
 
   private tree!: Node;
-  private textAtlas?: TextAtlas;
+  private typesetter?: Typesetter;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.mouse = new Mouse(canvas, this.camera);
@@ -47,49 +48,61 @@ export class Viewer {
       );
     }
 
-    // Load text atlas before tree layout (needed for text measurements)
-    try {
-      const atlasResponse = await fetch('text-atlas.json');
-      if (atlasResponse.ok) {
-        this.textAtlas = await atlasResponse.json();
-      } else {
-        console.warn('Failed to load text-atlas.json, using fallback node sizes');
-      }
-    } catch (error) {
-      console.warn('Error loading text atlas:', error);
+    const [tree, typesetter] = await Promise.all([
+      fetch('data.json').then((response) => response.json() as Promise<Node>),
+      Typesetter.load().catch((error) => {
+        console.error('Failed to load fonts, rendering without text:', error);
+        return undefined;
+      })
+    ]);
+    this.tree = tree;
+    this.typesetter = typesetter;
+
+    // Typeset all propositions, then generate the glyph atlas once
+    if (typesetter) {
+      typesetTree(this.tree, typesetter);
+      const atlas = typesetter.buildAtlas();
+      this.renderer?.initTextRendering(atlas);
     }
 
-    // Load tree data
-    this.tree = (await fetch('data.json').then((response) =>
-      response.json()
-    )) as Node;
-
-    // Compute layout with text measurements
-    const root = layout(this.tree, this.textAtlas);
-
-    // Update renderer with the tree data
-    if (this.tree && this.renderer) {
-      const serializedData = serializeTreeForGPU(root);
-      // Load text data asynchronously
-      const textData = await serializeTextForGPU(root);
-      this.renderer.upload({
-        ...serializedData,
-        ...textData
-      });
-    }
+    const root = this.updateBuffers();
     this.updateSize();
+
+    // Open on the proposition named in the URL hash (e.g. #4.1252), or on 1
+    const focusId = decodeURIComponent(location.hash.slice(1)) || '1';
+    const focus =
+      root?.descendants().find((node) => node.data.data?.id === focusId) ??
+      root?.children?.[0];
+    if (focus) {
+      const r = nodeRect(focus);
+      this.camera.fitBounds(r.x, r.y, r.x + r.width, r.y + r.height, 3);
+      this.redraw();
+    }
+  }
+
+  /** Recomputes the layout and uploads all GPU buffers. */
+  private updateBuffers() {
+    if (!this.renderer) return;
+    const root = layout(this.tree);
+    this.renderer.upload({
+      ...serializeTreeForGPU(root),
+      ...(this.typesetter ? serializeTextForGPU(root, this.typesetter) : {})
+    });
+    return root;
   }
 
   updateSize(
     width = this.canvas.clientWidth,
     height = this.canvas.clientHeight
   ) {
-    this.canvas.width = width;
-    this.canvas.height = height;
+    // Render at device resolution; the camera works in CSS pixels
+    const dpr = window.devicePixelRatio || 1;
+    const deviceWidth = Math.max(1, Math.round(width * dpr));
+    const deviceHeight = Math.max(1, Math.round(height * dpr));
     this.camera.width = width;
     this.camera.height = height;
     if (this.renderer) {
-      this.renderer.resize(width, height);
+      this.renderer.resize(deviceWidth, deviceHeight);
       this.redraw();
     }
   }

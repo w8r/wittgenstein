@@ -15,11 +15,11 @@ export abstract class BaseRenderer {
   public abstract resize(width: number, height: number): void;
 
   abstract upload(data: {
-    nodeData: Float32Array;
+    nodeData: Float32Array<ArrayBuffer>;
     nodeCount: number;
-    linkData: Float32Array;
+    linkData: Float32Array<ArrayBuffer>;
     linkCount: number;
-    glyphData?: Float32Array; // Optional for graceful migration
+    glyphData?: Float32Array<ArrayBuffer>; // Optional for graceful migration
     glyphCount?: number;
   }): void;
 

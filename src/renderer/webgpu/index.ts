@@ -6,11 +6,25 @@ import textFragmentShaderSrc from './text.frag.wgsl?raw';
 import textVertexShaderSrc from './text.vert.wgsl?raw';
 import { BaseRenderer } from '../base';
 import { VERTICES_PER_EDGE } from '../../constants';
+import type { AtlasTexture } from '../../text/typesetter';
 
 const QUAD_VERTICES = new Float32Array([
   -0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5
 ]);
-const QUAD_VERTEX_COUNT = 4;
+
+/** Uniforms: viewProj (mat4x4f) + viewport size (vec2f) + padding */
+const UNIFORM_BUFFER_SIZE = 80;
+const VIEWPORT_OFFSET = 64;
+
+/**
+ * Everything is drawn at z = 0 in painter's order (links, nodes, text),
+ * so depth testing is disabled.
+ */
+const NO_DEPTH_TEST: GPUDepthStencilState = {
+  format: 'depth24plus',
+  depthWriteEnabled: false,
+  depthCompare: 'always'
+};
 
 export class Renderer extends BaseRenderer {
   private device!: GPUDevice;
@@ -39,11 +53,13 @@ export class Renderer extends BaseRenderer {
 
   private createViewProjBuffer(view: Float32Array) {
     this.viewProjBuffer = this.device.createBuffer({
-      size: view.byteLength,
+      size: UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       mappedAtCreation: true
     });
-    new Float32Array(this.viewProjBuffer.getMappedRange()).set(view);
+    const uniforms = new Float32Array(this.viewProjBuffer.getMappedRange());
+    uniforms.set(view);
+    uniforms.set([this.canvas.width, this.canvas.height], VIEWPORT_OFFSET / 4);
     this.viewProjBuffer.unmap();
   }
 
@@ -62,6 +78,12 @@ export class Renderer extends BaseRenderer {
 
       // Create or update depth texture
       this.createDepthTexture();
+
+      this.device.queue.writeBuffer(
+        this.viewProjBuffer,
+        VIEWPORT_OFFSET,
+        new Float32Array([width, height])
+      );
     }
   }
 
@@ -77,7 +99,7 @@ export class Renderer extends BaseRenderer {
     });
   }
 
-  public updateViewProj(matrix: Float32Array) {
+  public updateViewProj(matrix: Float32Array<ArrayBuffer>) {
     if (!this.device || !this.viewProjBuffer) return;
     this.device.queue.writeBuffer(this.viewProjBuffer, 0, matrix);
   }
@@ -115,46 +137,27 @@ export class Renderer extends BaseRenderer {
 
     // Create pipelines
     this.createPipelines();
-
-    // Initialize text rendering (async, non-blocking)
-    this.initTextRendering().catch((err: unknown) => {
-      console.error('Failed to initialize text rendering:', err);
-      this.textEnabled = false;
-    });
   }
 
-  private async initTextRendering() {
+  /** Uploads the MSDF glyph atlas and creates the text pipeline. */
+  initTextRendering(atlas: AtlasTexture) {
     try {
-      // Load text atlas texture
-      const atlasImageResponse = await fetch('text-atlas.png');
-      if (!atlasImageResponse.ok) {
-        throw new Error('Failed to load text-atlas.png');
-      }
-      const atlasImageBlob = await atlasImageResponse.blob();
-      const atlasImageBitmap = await createImageBitmap(atlasImageBlob);
-
-      // Create texture
+      // Plain (non-sRGB) format: MSDF channels are distances, not colors
       this.atlasTexture = this.device.createTexture({
-        size: [atlasImageBitmap.width, atlasImageBitmap.height, 1],
+        size: [atlas.width, atlas.height, 1],
         format: 'rgba8unorm',
-        usage:
-          GPUTextureUsage.TEXTURE_BINDING |
-          GPUTextureUsage.COPY_DST |
-          GPUTextureUsage.RENDER_ATTACHMENT
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
       });
-
-      // Write image data to texture
-      this.device.queue.copyExternalImageToTexture(
-        { source: atlasImageBitmap },
+      this.device.queue.writeTexture(
         { texture: this.atlasTexture },
-        [atlasImageBitmap.width, atlasImageBitmap.height]
+        atlas.data,
+        { bytesPerRow: atlas.width * 4 },
+        [atlas.width, atlas.height]
       );
 
-      // Create sampler
       this.atlasSampler = this.device.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
-        mipmapFilter: 'linear',
         addressModeU: 'clamp-to-edge',
         addressModeV: 'clamp-to-edge'
       });
@@ -172,14 +175,13 @@ export class Renderer extends BaseRenderer {
       this.glyphCount = 0;
 
       // Create text pipeline AFTER buffer exists
-      this.createTextPipeline();
+      this.createTextPipeline(atlas.pxRange);
 
       this.textEnabled = true;
       console.log('Text rendering initialized successfully');
     } catch (error) {
       console.error('Error initializing text rendering:', error);
       this.textEnabled = false;
-      throw error;
     }
   }
 
@@ -217,11 +219,7 @@ export class Renderer extends BaseRenderer {
         topology: 'triangle-list',
         cullMode: 'none'
       },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: true,
-        depthCompare: 'less'
-      }
+      depthStencil: NO_DEPTH_TEST
     });
   }
 
@@ -260,15 +258,11 @@ export class Renderer extends BaseRenderer {
       primitive: {
         topology: 'triangle-strip'
       },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: true,
-        depthCompare: 'less'
-      }
+      depthStencil: NO_DEPTH_TEST
     });
   }
 
-  private createTextPipeline() {
+  private createTextPipeline(pxRange: number) {
     // Create shader modules
     const textVertexShader = this.device.createShaderModule({
       label: 'Text Vertex Shader',
@@ -327,6 +321,7 @@ export class Renderer extends BaseRenderer {
       fragment: {
         module: textFragmentShader,
         entryPoint: 'main',
+        constants: { PX_RANGE: pxRange },
         targets: [
           {
             format: navigator.gpu.getPreferredCanvasFormat(),
@@ -347,11 +342,7 @@ export class Renderer extends BaseRenderer {
         topology: 'triangle-list',
         cullMode: 'none'
       },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: true,
-        depthCompare: 'less'
-      }
+      depthStencil: NO_DEPTH_TEST
     });
 
     // Create bind group for uniforms and glyph buffer (group 0)
@@ -520,11 +511,11 @@ export class Renderer extends BaseRenderer {
     glyphData,
     glyphCount
   }: {
-    nodeData: Float32Array;
+    nodeData: Float32Array<ArrayBuffer>;
     nodeCount: number;
-    linkData: Float32Array;
+    linkData: Float32Array<ArrayBuffer>;
     linkCount: number;
-    glyphData?: Float32Array;
+    glyphData?: Float32Array<ArrayBuffer>;
     glyphCount?: number;
   }) {
     this.nodeCount = nodeCount;

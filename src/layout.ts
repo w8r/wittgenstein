@@ -1,59 +1,85 @@
 import { flextree } from 'd3-flextree';
-import { Node, TextAtlas } from './types';
+import { Node } from './types';
 import {
-  COLLAPSED_SIZE,
-  LAYER_GAP,
+  EMPTY_NODE_SIZE,
   FIXED_TEXT_WIDTH,
+  ID_FONT_SIZE,
+  ID_GAP,
+  LAYER_GAP,
   PADDING_X,
   PADDING_Y,
-  ID_WIDTH
+  SIBLING_GAP,
+  SUBTREE_GAP,
+  TEXT_FONT_SIZE
 } from './constants';
-import { measureText } from './buffers';
+import { parseLatex } from './text/latex';
+import { Typesetter } from './text/typesetter';
 
-export function layout(data: Node, textAtlas?: TextAtlas) {
-  const queue = [data];
-  const depthMap: Record<number, number> = {};
-
-  // Pre-process nodes to measure text and set sizes
-  while (queue.length) {
-    const node = queue.shift()!;
-
-    if (node.collapsed) {
-      node.width = COLLAPSED_SIZE;
-      node.height = COLLAPSED_SIZE;
-    } else if (node.data && node.data.content && textAtlas) {
-      // Measure text layout to determine node size
-      const textLayout = measureText(
-        node.data.content,
-        textAtlas,
-        1.0, // Normal scale
-        FIXED_TEXT_WIDTH
-      );
-
-      // Set node dimensions based on text + padding
-      node.width = textLayout.width + PADDING_X * 2 + ID_WIDTH;
-      node.height = textLayout.height + PADDING_Y * 2;
-
-      // Update proposition data with calculated dimensions
-      node.data.width = node.width;
-      node.data.height = node.height;
-    } else {
-      // Fallback size for nodes without text or atlas
-      node.width = node.data?.width || COLLAPSED_SIZE;
-      node.height = node.data?.height || COLLAPSED_SIZE;
-    }
-
-    depthMap[node.depth] = Math.max(depthMap[node.depth] || 0, node.width);
-
-    if (node.children) {
-      queue.push(...node.children);
-    }
+/** Visits every node of the tree, including collapsed branches. */
+export function forEachNode(root: Node, fn: (node: Node) => void) {
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop()!;
+    fn(node);
+    if (node.children) stack.push(...node.children);
   }
+}
+
+/**
+ * Typesets every proposition (content and ID). Must run before
+ * `typesetter.buildAtlas()` and `layout()`.
+ */
+export function typesetTree(root: Node, typesetter: Typesetter) {
+  forEachNode(root, (node) => {
+    if (!node.data?.content) return;
+    node.text = {
+      content: typesetter.layout(
+        parseLatex(node.data.content),
+        TEXT_FONT_SIZE,
+        FIXED_TEXT_WIDTH
+      ),
+      id: typesetter.layout(
+        [{ type: 'text', text: node.data.id, italic: false, script: 0, math: false }],
+        ID_FONT_SIZE
+      )
+    };
+  });
+}
+
+/**
+ * Sizes nodes from their typeset text and computes the tree layout.
+ * Children of collapsed nodes are excluded.
+ */
+export function layout(data: Node) {
+  // ID column width per depth so that texts of a column line up
+  const idColumns: Record<number, number> = {};
+  forEachNode(data, (node) => {
+    if (node.text) {
+      idColumns[node.depth] = Math.max(
+        idColumns[node.depth] || 0,
+        node.text.id.width
+      );
+    }
+  });
+
+  const depthMap: Record<number, number> = {};
+  forEachNode(data, (node) => {
+    if (node.text) {
+      const { content, id } = node.text;
+      node.idColumnWidth = idColumns[node.depth];
+      node.width = PADDING_X * 2 + node.idColumnWidth + ID_GAP + content.width;
+      node.height = PADDING_Y * 2 + Math.max(content.height, id.height);
+    } else {
+      node.width = EMPTY_NODE_SIZE;
+      node.height = EMPTY_NODE_SIZE;
+    }
+    depthMap[node.depth] = Math.max(depthMap[node.depth] || 0, node.width);
+  });
 
   const layout = flextree<Node>({
     nodeSize: (d) => [d.data.height, depthMap[d.data.depth] + LAYER_GAP],
-    children: (d) => d.children,
-    spacing: () => 30
+    children: (d) => (d.collapsed ? undefined : d.children),
+    spacing: (a, b) => (a.parent === b.parent ? SIBLING_GAP : SUBTREE_GAP)
   });
   const tree = layout.hierarchy(data);
   return layout(tree);

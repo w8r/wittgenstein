@@ -9,10 +9,10 @@ struct Uniforms {
 };
 
 struct GlyphData {
-  position: vec2f,      // World position (x, y)
-  atlasPos: vec2f,      // Atlas texture coordinates (normalized 0-1)
-  atlasSize: vec2f,     // Glyph size in atlas (normalized)
-  glyphSize: vec2f,     // Glyph size in world space
+  position: vec2f,      // World position of the quad's bottom-left corner
+  glyphSize: vec2f,     // Quad size in world space
+  atlasPos: vec2f,      // Atlas rect top-left (normalized, y-down)
+  atlasSize: vec2f,     // Atlas rect size (normalized)
   color: vec4f,         // Text color
 };
 
@@ -24,7 +24,7 @@ fn main(
   @builtin(vertex_index) vertexIndex: u32,
   @builtin(instance_index) instanceIndex: u32
 ) -> VertexOutput {
-  // Quad vertices for glyph (two triangles)
+  // Quad vertices for glyph (two triangles), y-up
   var positions = array<vec2f, 6>(
     vec2f(0.0, 0.0),  // Bottom-left
     vec2f(1.0, 0.0),  // Bottom-right
@@ -34,28 +34,13 @@ fn main(
     vec2f(1.0, 1.0)   // Top-right
   );
 
-  var texCoords = array<vec2f, 6>(
-    vec2f(0.0, 0.0),
-    vec2f(1.0, 0.0),
-    vec2f(0.0, 1.0),
-    vec2f(0.0, 1.0),
-    vec2f(1.0, 0.0),
-    vec2f(1.0, 1.0)
-  );
+  let glyph = glyphs[instanceIndex];
+  let pos = positions[vertexIndex];
 
-  var glyph = glyphs[instanceIndex];
-  var pos = positions[vertexIndex];
+  let worldPos = vec4f(glyph.position + pos * glyph.glyphSize, 0.0, 1.0);
 
-  // Calculate world position for this vertex
-  var worldPos = vec4f(
-    glyph.position.x + pos.x * glyph.glyphSize.x,
-    glyph.position.y + pos.y * glyph.glyphSize.y,
-    0.0,
-    1.0
-  );
-
-  // Calculate texture coordinate in atlas
-  var texCoord = glyph.atlasPos + texCoords[vertexIndex] * glyph.atlasSize;
+  // Atlas texture space is y-down: the top of the quad maps to atlasPos.y
+  let texCoord = glyph.atlasPos + vec2f(pos.x, 1.0 - pos.y) * glyph.atlasSize;
 
   var output: VertexOutput;
   output.position = uniforms.viewProj * worldPos;
