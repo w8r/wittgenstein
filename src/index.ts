@@ -527,15 +527,35 @@ export class Viewer {
       const childRect = this.targets.get(child);
       if (childRect) rects.push(childRect);
     }
-    const fit = this.fitCamera(unionRects(rects), 1.15);
+    const bounds = unionRects(rects);
+    const fit = this.fitCamera(bounds, 1.15);
     const zoom = Math.min(MAX_FOCUS_ZOOM, Math.max(MIN_FOCUS_ZOOM, fit.zoom));
+    const header = this.headerHeight();
+
+    if (rects.length > 1 && bounds.width / zoom > this.camera.width) {
+      // Narrow screen (phone): the node and its children don't fit side by
+      // side, so show the children's column, with the incoming links
+      const column = unionRects(rects.slice(1));
+      const visibleHeight = this.camera.height - header;
+      const y =
+        column.height / zoom <= visibleHeight * 0.9
+          ? column.y + column.height / 2 + (header / 2) * zoom
+          : // Taller than the screen: start at the first child, below the header
+            column.y + column.height - (this.camera.height / 2 - header - 16) * zoom;
+      const x = Math.max(
+        column.x + column.width / 2,
+        column.x - 24 * zoom + (this.camera.width / 2) * zoom
+      );
+      return { x: Math.min(x, column.x + column.width / 2 + 24 * zoom), y, zoom };
+    }
+
     if (zoom < fit.zoom) {
       // Children don't fit at a readable size: keep the node centered
       // vertically and show as much of the children as fits to its right
       const leftEdge = rect.x - 40 * zoom;
       return {
         x: Math.min(fit.x, leftEdge + (this.camera.width * zoom) / 2),
-        y: rect.y + rect.height / 2 + (this.headerHeight() / 2) * zoom,
+        y: rect.y + rect.height / 2 + (header / 2) * zoom,
         zoom
       };
     }
