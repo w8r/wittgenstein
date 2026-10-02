@@ -10,13 +10,11 @@ const loaderLabel = loader.querySelector<HTMLElement>('.loader-label')!;
 const STRINGS: Record<Language, Record<string, string>> = {
   en: {
     title: 'Tractatus Logico-Philosophicus (1922)',
-    by: 'by',
-    language: 'deutsch'
+    by: 'by'
   },
   de: {
     title: 'Logisch-philosophische Abhandlung (1921)',
-    by: 'von',
-    language: 'english'
+    by: 'von'
   }
 };
 
@@ -27,6 +25,9 @@ function applyLanguage() {
   document.documentElement.lang = language;
   for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     element.textContent = STRINGS[language][element.dataset.i18n!];
+  }
+  for (const button of document.querySelectorAll<HTMLElement>('[data-language]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.language === language));
   }
   // Keep the language in the URL so shared links open in it
   const url = new URL(location.href);
@@ -49,16 +50,46 @@ const viewer = new Viewer(document.getElementById('canvas') as HTMLCanvasElement
 });
 applyLanguage();
 
+// --- Menu: floating action button (FAB) that opens the controls ----------
+
+const menu = document.getElementById('menu')!;
+const menuToggle = menu.querySelector<HTMLButtonElement>('.menu-toggle')!;
+
+function setMenuOpen(open: boolean) {
+  menu.classList.toggle('open', open);
+  menuToggle.setAttribute('aria-expanded', String(open));
+}
+
+menuToggle.addEventListener('click', () =>
+  setMenuOpen(!menu.classList.contains('open'))
+);
+// Close on a tap or click anywhere else, or on Escape
+document.addEventListener('pointerdown', (event) => {
+  if (!menu.contains(event.target as Node)) setMenuOpen(false);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && menu.classList.contains('open')) {
+    setMenuOpen(false);
+    menuToggle.focus();
+  }
+});
+
 const actions: Record<string, () => void> = {
   'expand-all': () => viewer.expandAll(),
   'collapse-all': () => viewer.collapseAll(),
-  center: () => viewer.center(),
-  language: () => {
-    language = language === 'en' ? 'de' : 'en';
-    viewer.setLanguage(language);
-    applyLanguage();
-  }
+  center: () => viewer.center()
 };
 for (const control of document.querySelectorAll<HTMLElement>('[data-action]')) {
-  control.addEventListener('click', () => actions[control.dataset.action!]?.());
+  control.addEventListener('click', () => {
+    actions[control.dataset.action!]?.();
+    setMenuOpen(false);
+  });
+}
+// The language switch keeps the menu open, so the change can be seen
+for (const button of document.querySelectorAll<HTMLElement>('[data-language]')) {
+  button.addEventListener('click', () => {
+    language = button.dataset.language as Language;
+    viewer.setLanguage(language);
+    applyLanguage();
+  });
 }
