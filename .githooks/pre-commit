@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Pre-commit hook: check formatting (oxfmt) and lint (oxlint) on staged files.
+# Never rewrites files: run `npm run format` to fix, then re-stage.
+# Installed by `npm install` (the `prepare` script sets core.hooksPath).
+
+set -euo pipefail
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+echo "Checking formatting (oxfmt --check) on staged files..."
+echo "$STAGED" | xargs npx oxfmt --check --no-error-on-unmatched-pattern
+
+LINTABLE=$(echo "$STAGED" | grep -E '\.(ts|mts|js|mjs)$' || true)
+if [ -n "$LINTABLE" ]; then
+  echo "Linting (oxlint) staged files..."
+  echo "$LINTABLE" | xargs npx oxlint --deny-warnings
+fi
+
+echo "Pre-commit checks passed."

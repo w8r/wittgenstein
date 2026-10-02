@@ -4,13 +4,8 @@ import linkFragmentShaderSrc from './link.frag.wgsl?raw';
 import linkVertexShaderSrc from './link.vert.wgsl?raw';
 import textFragmentShaderSrc from './text.frag.wgsl?raw';
 import textVertexShaderSrc from './text.vert.wgsl?raw';
-import { BaseRenderer } from '../base';
 import { VERTICES_PER_EDGE } from '../../constants';
 import type { AtlasTexture } from '../../text/typesetter';
-
-const QUAD_VERTICES = new Float32Array([
-  -0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5
-]);
 
 /** Uniforms: viewProj (mat4x4f) + viewport size (vec2f) + padding */
 const UNIFORM_BUFFER_SIZE = 80;
@@ -26,7 +21,12 @@ const NO_DEPTH_TEST: GPUDepthStencilState = {
   depthCompare: 'always'
 };
 
-export class Renderer extends BaseRenderer {
+/**
+ * WebGPU renderer: links (tessellated Bézier ribbons), proposition
+ * highlights (rounded rectangles) and MSDF text, all instanced from
+ * storage buffers and drawn in that order.
+ */
+export class Renderer {
   private device!: GPUDevice;
   private context!: GPUCanvasContext;
   private viewProjBuffer!: GPUBuffer;
@@ -36,7 +36,6 @@ export class Renderer extends BaseRenderer {
   private linkPipeline!: GPURenderPipeline;
   private nodeBuffer!: GPUBuffer;
   private linkBuffer!: GPUBuffer;
-  private quadBuffer!: GPUBuffer;
 
   // Text rendering resources
   private textPipeline!: GPURenderPipeline;
@@ -47,9 +46,11 @@ export class Renderer extends BaseRenderer {
   private atlasSampler!: GPUSampler;
   private textEnabled: boolean = false;
 
-  protected nodeCount: number = 0;
-  protected linkCount: number = 0;
-  protected glyphCount: number = 0;
+  private nodeCount: number = 0;
+  private linkCount: number = 0;
+  private glyphCount: number = 0;
+
+  constructor(private canvas: HTMLCanvasElement) {}
 
   private createViewProjBuffer(view: Float32Array) {
     this.viewProjBuffer = this.device.createBuffer({
@@ -109,7 +110,6 @@ export class Renderer extends BaseRenderer {
   }
 
   async init(view: Float32Array) {
-    await super.init(view);
     // Request adapter
     const adapter = await navigator.gpu!.requestAdapter();
     if (!adapter) {
@@ -409,16 +409,8 @@ export class Renderer extends BaseRenderer {
       bindGroupLayouts: [bindGroupLayout]
     });
 
-    this.createNodePipeline(
-      nodeVertexShader,
-      nodeFragmentShader,
-      pipelineLayout
-    );
-    this.createLinkPipeline(
-      linkVertexShader,
-      linkFragmentShader,
-      pipelineLayout
-    );
+    this.createNodePipeline(nodeVertexShader, nodeFragmentShader, pipelineLayout);
+    this.createLinkPipeline(linkVertexShader, linkFragmentShader, pipelineLayout);
   }
 
   private createEmptyBuffers() {
@@ -435,14 +427,7 @@ export class Renderer extends BaseRenderer {
     // Create link buffer
     this.linkBuffer = this.device.createBuffer({
       size: minLinkBufferSize,
-      usage:
-        GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
-    });
-
-    // Quad buffer: 4 vertices, 2 floats per vertex
-    this.quadBuffer = this.device.createBuffer({
-      size: QUAD_VERTICES.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
     });
 
     // Initialize with empty data
@@ -452,7 +437,6 @@ export class Renderer extends BaseRenderer {
 
     this.device.queue.writeBuffer(this.nodeBuffer, 0, emptyNodeData);
     this.device.queue.writeBuffer(this.linkBuffer, 0, emptyLinkData);
-    this.device.queue.writeBuffer(this.quadBuffer, 0, QUAD_VERTICES);
 
     // Initialize counts to 0
     this.nodeCount = 0;
@@ -546,10 +530,7 @@ export class Renderer extends BaseRenderer {
 
       this.linkBuffer = this.device.createBuffer({
         size: linkData.byteLength,
-        usage:
-          GPUBufferUsage.STORAGE |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.VERTEX
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
       });
 
       bindGroupNeedsRecreation = true;
@@ -630,19 +611,11 @@ export class Renderer extends BaseRenderer {
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setBindGroup(0, this.bindGroup);
 
-    // --- Draw links as instanced Bezier strips ---
+    // Links: one Bézier triangle strip per instance
     passEncoder.setPipeline(this.linkPipeline);
-    // No vertex buffer needed for links
-    // passEncoder.setVertexBuffer(0, this.quadBuffer); // REMOVE THIS LINE
-    // passEncoder.setVertexBuffer(1, this.linkBuffer); // REMOVE THIS LINE
+    passEncoder.draw(VERTICES_PER_EDGE, this.linkCount);
 
-    // Each Bezier curve is tessellated into segmentCount segments, 2 vertices per segment
-    //const SEGMENT_COUNT = 80;
-    //const VERTICES_PER_EDGE = SEGMENT_COUNT * 2;
-    const instanceCount = this.linkCount;
-    passEncoder.draw(VERTICES_PER_EDGE, instanceCount);
-
-    // --- Draw nodes as before ---
+    // Hover/selection highlights and the root dot
     passEncoder.setPipeline(this.nodePipeline);
     passEncoder.draw(6, this.nodeCount); // 6 vertices per quad, instanced
 

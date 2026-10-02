@@ -12,7 +12,7 @@ export const EMPTY_NODE_SIZE = 8;
 export const NODE_STRIDE = 12;
 export const LINK_STRIDE = 12;
 
-export const SEGMENT_COUNT = 256;
+const SEGMENT_COUNT = 256;
 export const VERTICES_PER_EDGE = (SEGMENT_COUNT + 1) * 2;
 
 // Text rendering constants

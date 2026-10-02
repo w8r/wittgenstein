@@ -27,7 +27,7 @@ struct LinkData {
 const SEGMENT_COUNT: u32 = 256u;
 // Edge width in world units, clamped to a readable range of screen pixels
 const WORLD_WIDTH: f32 = 1.5;
-const MIN_WIDTH_PX: f32 = 1.0;
+const MIN_WIDTH_PX: f32 = 0.5;
 const MAX_WIDTH_PX: f32 = 3.0;
 // Extra pixels on each side for anti-aliasing
 const AA_MARGIN_PX: f32 = 1.0;

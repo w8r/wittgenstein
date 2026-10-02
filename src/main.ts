@@ -18,8 +18,7 @@ const STRINGS: Record<Language, Record<string, string>> = {
   }
 };
 
-let language: Language =
-  new URLSearchParams(location.search).get('lang') === 'de' ? 'de' : 'en';
+let language: Language = new URLSearchParams(location.search).get('lang') === 'de' ? 'de' : 'en';
 
 function applyLanguage() {
   document.documentElement.lang = language;
@@ -60,9 +59,7 @@ function setMenuOpen(open: boolean) {
   menuToggle.setAttribute('aria-expanded', String(open));
 }
 
-menuToggle.addEventListener('click', () =>
-  setMenuOpen(!menu.classList.contains('open'))
-);
+menuToggle.addEventListener('click', () => setMenuOpen(!menu.classList.contains('open')));
 // Close on a tap or click anywhere else, or on Escape
 document.addEventListener('pointerdown', (event) => {
   if (!menu.contains(event.target as Node)) setMenuOpen(false);

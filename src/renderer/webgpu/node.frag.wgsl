@@ -11,9 +11,7 @@ fn main(
   @location(0) local: vec2f,
   @location(1) color: vec4f,
   @location(2) halfSize: vec2f,
-  @location(3) cornerRadius: f32,
-  @location(4) isCollapsed: f32,
-  @location(5) state: f32
+  @location(3) cornerRadius: f32
 ) -> @location(0) vec4f {
   if (color.a <= 0.0) {
     discard;

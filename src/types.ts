@@ -1,24 +1,11 @@
 import type { TextBlock } from './text/typesetter';
 
-export interface TreeNode {
-  id: number;
-  parentId: number;
-  children: TreeNode[];
-  depth: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 export interface Proposition {
   id: string;
   /** English translation (Ogden), LaTeX */
   content: string;
   /** German original, LaTeX */
   contentDe?: string;
-  width: number;
-  height: number;
 }
 
 export interface Node {
@@ -27,11 +14,10 @@ export interface Node {
   data?: Proposition;
   parentId?: string;
   depth: number;
+  /** Size of the typeset proposition, set by layout() */
   width: number;
   height: number;
   collapsed?: boolean;
-  x?: number;
-  y?: number;
   /** Typeset proposition text in the current language (set before layout) */
   text?: NodeText;
   /** Typeset proposition text per language */

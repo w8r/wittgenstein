@@ -3,30 +3,6 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { Node, Proposition } from '../src/types';
 import { NONE } from '../src/constants';
-import { TexLinebreak } from 'tex-linebreak2';
-
-const measureText = (text) => text.length * 5;
-
-function estimateBox(text: string) {
-  const layout = new TexLinebreak(text, {
-    measureFn: measureText,
-    align: 'left',
-    lineWidth: 200
-  });
-
-  let width = 0;
-  let height = 0;
-  const lineHeight = 1;
-  layout.lines.forEach((line) => {
-    const lineWidth = line.positionedItems.reduce((w, pi) => {
-      return Math.max(w, pi.xOffset + pi.width);
-    }, 0);
-    width = Math.max(width, lineWidth);
-    height += lineHeight;
-  });
-  return { width, height };
-}
-
 const fileName = process.argv[2];
 if (!fileName) {
   console.error('Please provide a file name as an argument.');
@@ -46,7 +22,6 @@ function parse(texContent: string) {
     parseTeXPropositions(texContent, 'PropositionG').map((p) => [p.id, p.content])
   );
   for (const prop of matches) {
-    Object.assign(prop, estimateBox(prop.content));
     const contentDe = german.get(prop.id);
     if (contentDe) prop.contentDe = contentDe;
     else console.warn(`No German text for proposition ${prop.id}`);
@@ -94,8 +69,6 @@ function parse(texContent: string) {
       curr = branch!;
     }
     curr.data = prop;
-    curr.width = prop.width;
-    curr.height = prop.height;
     curr.collapsed = false;
   }
 
@@ -115,10 +88,7 @@ function parse(texContent: string) {
 // write the tree to ./public/data.json
 const tree = parse(fileContent);
 mkdirSync(path.join(process.cwd(), 'public'), { recursive: true });
-writeFileSync(
-  path.join(process.cwd(), 'public', 'data.json'),
-  JSON.stringify(tree, null, 2)
-);
+writeFileSync(path.join(process.cwd(), 'public', 'data.json'), JSON.stringify(tree, null, 2));
 
 /**
  * Parse TeX propositions with proper handling of nested braces
@@ -151,7 +121,6 @@ function parseTeXPropositions(
 
   // Find all proposition starts
   let match;
-  let lastEndPos = 0;
 
   while ((match = propStartPattern.exec(texContent)) !== null) {
     // Starting position of the id argument (after the opening brace)
@@ -172,31 +141,12 @@ function parseTeXPropositions(
     const titleEndPos = findClosingBrace(texContent, titleStartPos + 1);
     if (titleEndPos === -1) continue; // Skip if no matching closing brace
 
-    // Extract the title
+    // The second argument is the proposition's text
     const content = texContent.substring(titleStartPos + 1, titleEndPos).trim();
+    propositions.push({ id, content });
 
-    // Find the content up to the next proposition or end of text
+    // Continue at the next proposition
     const nextPropPos = texContent.indexOf(`\\${macro}`, titleEndPos + 1);
-    const contentEndPos = nextPropPos !== -1 ? nextPropPos : texContent.length;
-
-    // Extract the content (everything after the title's closing brace up to next proposition)
-    //const content = texContent.substring(titleEndPos + 1, contentEndPos).trim();
-
-    // Get the raw proposition text
-    const raw = texContent.substring(match.index, contentEndPos);
-
-    // Add this proposition to our results
-    propositions.push({
-      id,
-      content,
-      width: 0,
-      height: 0
-    });
-
-    // Update the lastEndPos for the next iteration
-    lastEndPos = contentEndPos;
-
-    // Update the regex lastIndex to avoid overlapping matches
     if (nextPropPos !== -1) {
       propStartPattern.lastIndex = nextPropPos;
     }

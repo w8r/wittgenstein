@@ -52,7 +52,7 @@ export function nodeRect(node: TreeNode): Rect {
 
 /**
  * Serialize displayed nodes into a flat buffer for WebGPU
- * Format: [x, y, width, height, isCollapsed, state, padding, padding, r, g, b, a] × nodeCount
+ * Format: [x, y, width, height, (padding × 4), r, g, b, a] × nodeCount
  */
 export function serializeNodes(nodes: DrawNode[]): {
   nodeData: Float32Array<ArrayBuffer>;
@@ -66,9 +66,6 @@ export function serializeNodes(nodes: DrawNode[]): {
     nodeData[offset + 1] = rect.y;
     nodeData[offset + 2] = rect.width;
     nodeData[offset + 3] = rect.height;
-    // Collapsed marker only when there is something hidden
-    nodeData[offset + 4] = node.collapsed && node.children?.length ? 1 : 0;
-    nodeData[offset + 5] = state;
 
     if (!node.data) {
       // The root: a small dot where the seven main propositions branch from
@@ -78,8 +75,7 @@ export function serializeNodes(nodes: DrawNode[]): {
     }
     // No visible box: the typesetting carries the structure. Only hover
     // and selection get a faint warm tint.
-    const tint =
-      state & NODE_SELECTED ? SELECTED_TINT : state & NODE_HOVERED ? HOVER_TINT : 0;
+    const tint = state & NODE_SELECTED ? SELECTED_TINT : state & NODE_HOVERED ? HOVER_TINT : 0;
     nodeData[offset + 8] = 0.93;
     nodeData[offset + 9] = 0.88;
     nodeData[offset + 10] = 0.8;
@@ -171,12 +167,7 @@ export function nodeGlyphs(node: Node, typesetter: Typesetter): Float32Array {
   if (!text) return new Float32Array(0);
   const glyphs: number[] = [];
 
-  const pushBlock = (
-    block: TextBlock,
-    left: number,
-    top: number,
-    color: readonly number[]
-  ) => {
+  const pushBlock = (block: TextBlock, left: number, top: number, color: readonly number[]) => {
     for (const glyph of block.glyphs) {
       const q = typesetter.quad(glyph, left, top);
       if (q) glyphs.push(q.x, q.y, q.w, q.h, q.u, q.v, q.uw, q.vh, ...color);
@@ -206,8 +197,7 @@ export function serializeText(
   glyphData: Float32Array<ArrayBuffer>;
   glyphCount: number;
 } {
-  const hasMarker = (node: Node) =>
-    !!marker && !!node.collapsed && node.children?.length > 0;
+  const hasMarker = (node: Node) => !!marker && !!node.collapsed && node.children?.length > 0;
 
   let length = 0;
   for (const { node } of nodes) {

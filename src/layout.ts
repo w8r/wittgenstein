@@ -34,9 +34,7 @@ export function forEachNode(root: Node, fn: (node: Node) => void) {
  */
 export function removePlaceholders(root: Node) {
   const lift = (children: Node[]): Node[] =>
-    children.flatMap((child) =>
-      child.data ? [child] : lift(child.children || [])
-    );
+    children.flatMap((child) => (child.data ? [child] : lift(child.children || [])));
   const visit = (node: Node, depth: number) => {
     node.depth = depth;
     node.children = lift(node.children || []);
@@ -94,10 +92,7 @@ export function layout(data: Node) {
   const idColumns: Record<number, number> = {};
   forEachNode(data, (node) => {
     if (node.text) {
-      idColumns[node.depth] = Math.max(
-        idColumns[node.depth] || 0,
-        node.text.id.width
-      );
+      idColumns[node.depth] = Math.max(idColumns[node.depth] || 0, node.text.id.width);
     }
   });
 

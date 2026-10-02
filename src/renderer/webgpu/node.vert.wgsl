@@ -5,8 +5,6 @@ struct VertexOutput {
   @location(1) color: vec4f,
   @location(2) halfSize: vec2f,
   @location(3) cornerRadius: f32,
-  @location(4) isCollapsed: f32,
-  @location(5) state: f32,
 };
 
 struct Uniforms {
@@ -14,13 +12,10 @@ struct Uniforms {
 };
 
 struct NodeData {
-  position: vec2f,
+  position: vec2f,     // bottom-left corner, world units
   size: vec2f,
-  isCollapsed: f32,
-  state: f32,          // bit 0: hovered, bit 1: selected
-  padding1: f32,
-  padding2: f32,
-  color: vec4f,
+  _pad: vec4f,
+  color: vec4f,        // alpha = highlight opacity, 0 when not highlighted
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -55,7 +50,5 @@ fn main(
   output.color = node.color;
   output.halfSize = halfSize;
   output.cornerRadius = min(8.0, min(halfSize.x, halfSize.y));
-  output.isCollapsed = node.isCollapsed;
-  output.state = node.state;
   return output;
 }

@@ -3,9 +3,7 @@ import { parseLatex, tokensToString, type Token } from '../src/text/latex';
 
 const text = (source: string) => tokensToString(parseLatex(source));
 const runs = (source: string) =>
-  parseLatex(source).filter(
-    (t): t is Extract<Token, { type: 'text' }> => t.type === 'text'
-  );
+  parseLatex(source).filter((t): t is Extract<Token, { type: 'text' }> => t.type === 'text');
 
 describe('parseLatex', () => {
   it('joins source lines and keeps paragraph breaks', () => {
@@ -53,16 +51,16 @@ describe('parseLatex', () => {
   });
 
   it('drops footnotes, comments and layout commands', () => {
-    expect(
-      text('The world.\\footnote{A note.}\n% -----File: 097.png---\nEnd.')
-    ).toBe('The world. End.');
+    expect(text('The world.\\footnote{A note.}\n% -----File: 097.png---\nEnd.')).toBe(
+      'The world. End.'
+    );
     expect(text('a\\enlargethispage{\\baselineskip} b')).toBe('a b');
   });
 
   it('turns table rows into line breaks with column gaps', () => {
-    expect(
-      text('\\begin{tabular}{c|c}\np & q\\\\\n\\hline\nT & F\\\\\n\\end{tabular}')
-    ).toBe('p\u2003q\nT\u2003F');
+    expect(text('\\begin{tabular}{c|c}\np & q\\\\\n\\hline\nT & F\\\\\n\\end{tabular}')).toBe(
+      'p\u2003q\nT\u2003F'
+    );
   });
 
   it('treats display math environments as math', () => {
@@ -72,9 +70,7 @@ describe('parseLatex', () => {
   });
 
   it('expands abbreviations without leaving markup behind', () => {
-    expect(text('Thus \\exempliGratia: No.~\\PropERef{4.31}')).toBe(
-      'Thus e.g.: No.\u00a04.31'
-    );
+    expect(text('Thus \\exempliGratia: No.~\\PropERef{4.31}')).toBe('Thus e.g.: No.\u00a04.31');
   });
 });
 

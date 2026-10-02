@@ -99,7 +99,7 @@ export interface TextBlock {
 }
 
 /** A glyph quad in world space with its atlas texture rectangle. */
-export interface GlyphQuad {
+interface GlyphQuad {
   x: number;
   y: number;
   w: number;
@@ -166,8 +166,7 @@ export class Typesetter {
     const glyphs: PlacedGlyph[] = [];
     const lineHeight = fontSize * LINE_HEIGHT_EM;
     const { ascender, descender, unitsPerEm } = this.fonts[FontIndex.Slab].metrics;
-    const halfLeading =
-      (lineHeight - (fontSize * (ascender - descender)) / unitsPerEm) / 2;
+    const halfLeading = (lineHeight - (fontSize * (ascender - descender)) / unitsPerEm) / 2;
     const baselineOffset = halfLeading + (fontSize * ascender) / unitsPerEm;
 
     let top = 0;
@@ -290,7 +289,7 @@ export class Typesetter {
       for (let row = 0; row < atlas.height; row++) {
         data.set(
           src.subarray(row * rowBytes, (row + 1) * rowBytes),
-          ((this.rowOffsets[i] + row) * width) * 4
+          (this.rowOffsets[i] + row) * width * 4
         );
       }
     });

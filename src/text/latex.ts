@@ -88,24 +88,11 @@ const SYMBOLS: Record<string, string> = {
 };
 
 /** Commands rendered as their (single) argument, optionally italic. */
-const PASS_THROUGH = new Set([
-  'text',
-  'mbox',
-  'textrm',
-  'smash',
-  'PropERef',
-  'PropGRef'
-]);
+const PASS_THROUGH = new Set(['text', 'mbox', 'textrm', 'smash', 'PropERef', 'PropGRef']);
 const ITALIC = new Set(['emph', 'textit', 'BookTitle', 'Emph', 'EmphPart']);
 
 /** Commands whose arguments are discarded entirely. */
-const DROP_WITH_ARG = new Set([
-  'footnote',
-  'enlargethispage',
-  'hspace',
-  'vspace',
-  'phantom'
-]);
+const DROP_WITH_ARG = new Set(['footnote', 'enlargethispage', 'hspace', 'vspace', 'phantom']);
 
 /** Argument-less commands with no visible output. */
 const DROP = new Set([
@@ -521,12 +508,7 @@ class Parser {
         const last = out[out.length - 1];
         const atLineStart = !last || last.type !== 'text';
         if (atLineStart) token.text = token.text.replace(/^ +/, '');
-        if (
-          last &&
-          last.type === 'text' &&
-          last.text.endsWith(' ') &&
-          token.text.startsWith(' ')
-        ) {
+        if (last && last.type === 'text' && last.text.endsWith(' ') && token.text.startsWith(' ')) {
           token.text = token.text.slice(1);
         }
         if (token.text) out.push(token);

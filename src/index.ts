@@ -11,14 +11,8 @@ import {
   serializeText
 } from './buffers';
 import { Camera } from './camera';
-import {
-  forEachNode,
-  layout,
-  removePlaceholders,
-  setTreeLanguage,
-  typesetTree
-} from './layout';
-import { Mouse, type PointerKind } from './mouse';
+import { forEachNode, layout, removePlaceholders, setTreeLanguage, typesetTree } from './layout';
+import { Controls, type CameraState, type PointerKind } from './controls';
 import { Renderer } from './renderer/webgpu';
 import { Typesetter } from './text/typesetter';
 import { Language, Node, Point, Rect } from './types';
@@ -63,21 +57,14 @@ interface Transition {
   toAlpha: number;
 }
 
-interface CameraState {
-  x: number;
-  y: number;
-  zoom: number;
-}
-
-const easeInOutCubic = (t: number) =>
-  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export class Viewer {
   private renderer?: Renderer;
   private camera = new Camera();
-  private mouse!: Mouse;
+  private controls: Controls;
   private resizeObserver: ResizeObserver;
   private renderFrame: number = 0;
 
@@ -97,8 +84,6 @@ export class Viewer {
   /** Buffers need re-upload (layout, animation or highlight changed) */
   private dirty = true;
 
-  private cameraTween?: { from: CameraState; to: CameraState; start: number };
-
   private language: Language;
   private hovered: Node | null = null;
   private selected: Node | null = null;
@@ -108,11 +93,11 @@ export class Viewer {
     private options: ViewerOptions = {}
   ) {
     this.language = options.language ?? 'en';
-    this.mouse = new Mouse(canvas, this.camera);
-    this.mouse.on('update', this.requestRedraw);
-    this.mouse.on('interact', () => (this.cameraTween = undefined));
-    this.mouse.on('hover', this.onHover);
-    this.mouse.on('click', this.onClick);
+    this.controls = new Controls(canvas, this.camera, {
+      change: this.requestRedraw,
+      hover: this.onHover,
+      click: this.onClick
+    });
     window.addEventListener('keydown', this.onKeyDown);
     this.camera.zoom = 0.2;
 
@@ -305,9 +290,7 @@ export class Viewer {
 
   /** Current displayed rectangle and opacity of every node on screen */
   private currentState(now: number) {
-    const t = easeInOutCubic(
-      Math.min(1, (now - this.transitionStart) / LAYOUT_TRANSITION_MS)
-    );
+    const t = easeInOutCubic(Math.min(1, (now - this.transitionStart) / LAYOUT_TRANSITION_MS));
     const state = new Map<Node, { rect: Rect; alpha: number }>();
     for (const [node, tr] of this.transitions) {
       const alpha = lerp(tr.fromAlpha, tr.toAlpha, t);
@@ -401,10 +384,7 @@ export class Viewer {
    * the right of a proposition with children. `slop` (CSS px) widens the
    * targets, for fingers.
    */
-  private hitTest(
-    point: Point,
-    slop = 0
-  ): { node: Node; onMarker: boolean } | null {
+  private hitTest(point: Point, slop = 0): { node: Node; onMarker: boolean } | null {
     const world = this.camera.screenToWorld(point.x, point.y);
     const pad = slop * this.camera.zoom;
     for (let i = this.drawList.length - 1; i >= 0; i--) {
@@ -415,11 +395,7 @@ export class Viewer {
       if (world.x >= rect.x - pad && world.x <= right) {
         return { node, onMarker: false };
       }
-      if (
-        node.children?.length &&
-        world.x > right &&
-        world.x <= right + MARKER_ZONE + pad
-      ) {
+      if (node.children?.length && world.x > right && world.x <= right + MARKER_ZONE + pad) {
         return { node, onMarker: true };
       }
     }
@@ -427,7 +403,7 @@ export class Viewer {
   }
 
   private onHover = (point: Point | null) => {
-    const hit = point ? this.hitTest(point)?.node ?? null : null;
+    const hit = point ? (this.hitTest(point)?.node ?? null) : null;
     this.canvas.style.cursor = hit ? 'pointer' : '';
     if (hit === this.hovered) return;
     this.hovered = hit;
@@ -577,10 +553,7 @@ export class Viewer {
     const top = this.headerHeight();
     const width = Math.max(this.camera.width, 1);
     const height = Math.max(this.camera.height - top, 1);
-    const zoom = Math.max(
-      (bounds.width * padding) / width,
-      (bounds.height * padding) / height
-    );
+    const zoom = Math.max((bounds.width * padding) / width, (bounds.height * padding) / height);
     return {
       x: bounds.x + bounds.width / 2,
       // Shift up so the bounds are centered in the area below the header
@@ -598,39 +571,7 @@ export class Viewer {
   }
 
   private moveCamera(to: CameraState, animate = true) {
-    const zoom = Math.min(
-      this.camera.maxZoom,
-      Math.max(this.camera.minZoom, to.zoom)
-    );
-    if (!animate) {
-      this.cameraTween = undefined;
-      this.camera.position = { x: to.x, y: to.y };
-      this.camera.zoom = zoom;
-    } else {
-      this.cameraTween = {
-        from: { ...this.camera.position, zoom: this.camera.zoom },
-        to: { x: to.x, y: to.y, zoom },
-        start: performance.now()
-      };
-    }
-    this.requestRedraw();
-  }
-
-  private stepCamera(now: number): boolean {
-    const tween = this.cameraTween;
-    if (!tween) return false;
-    const t = Math.min(1, (now - tween.start) / CAMERA_TRANSITION_MS);
-    const e = easeInOutCubic(t);
-    this.camera.position = {
-      x: lerp(tween.from.x, tween.to.x, e),
-      y: lerp(tween.from.y, tween.to.y, e)
-    };
-    // Interpolate zoom geometrically so zooming feels uniform
-    this.camera.zoom = Math.exp(
-      lerp(Math.log(tween.from.zoom), Math.log(tween.to.zoom), e)
-    );
-    if (t >= 1) this.cameraTween = undefined;
-    return t < 1;
+    this.controls.moveTo(to, animate ? CAMERA_TRANSITION_MS : 0);
   }
 
   // --- Rendering -------------------------------------------------------------
@@ -640,16 +581,15 @@ export class Viewer {
     this.renderFrame = requestAnimationFrame(this.redraw);
   };
 
-  updateSize(
-    width = this.canvas.clientWidth,
-    height = this.canvas.clientHeight
-  ) {
+  updateSize(width = this.canvas.clientWidth, height = this.canvas.clientHeight) {
     // Render at device resolution; the camera works in CSS pixels
     const dpr = window.devicePixelRatio || 1;
     const deviceWidth = Math.max(1, Math.round(width * dpr));
     const deviceHeight = Math.max(1, Math.round(height * dpr));
     this.camera.width = width;
     this.camera.height = height;
+    // Keep the same world point at the center of the resized canvas
+    this.controls.sync();
     if (this.renderer) {
       this.renderer.resize(deviceWidth, deviceHeight);
       this.requestRedraw();
@@ -695,17 +635,16 @@ export class Viewer {
       // Upload once more after the last animation frame to settle exactly
       this.dirty = layoutAnimating;
     }
-    const cameraAnimating = this.stepCamera(now);
 
     this.renderer.updateViewProj(this.camera.getViewProjMatrix());
     this.renderer.draw();
 
-    if (layoutAnimating || cameraAnimating || this.dirty) this.requestRedraw();
+    if (layoutAnimating || this.dirty) this.requestRedraw();
   };
 
   public destroy() {
     this.resizeObserver.disconnect();
-    this.mouse.destroy();
+    this.controls.destroy();
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('popstate', this.onUrlChange);
     window.removeEventListener('hashchange', this.onUrlChange);
