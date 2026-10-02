@@ -1,0 +1,1521 @@
+\PropositionE{5}
+{Propositions are truth-functions of elementary
+propositions.
+
+(An elementary proposition is a truth-function
+of itself.)}
+
+
+\PropositionE{5.01}
+{The elementary propositions are the truth-arguments
+of propositions.}
+
+
+\PropositionE{5.02}
+{It is natural to confuse the arguments of
+functions with the indices of names. For I
+recognize the meaning of the sign containing it
+from the argument just as much as from the
+index.
+
+In Russell's ``$\DPtypo{+}{+_{c}}$'', for example, ``$c$'' is an
+index which indicates that the whole sign is the
+addition sign for cardinal numbers. But this way
+of symbolizing depends on arbitrary agreement,
+and one could choose a simple sign instead of
+``$+_{c}$'': but in ``$\Not{p}$'' ``$p$'' is not an index but
+an argument; the sense of ``$\Not{p}$'' \emph{cannot} be understood,
+unless the sense of ``$p$'' has previously been
+understood. (In the name Julius Cæsar, Julius is
+an index. The index is always part of a description
+of the object to whose name we attach it, \exempliGratia\ \emph{The}
+Cæsar of the Julian gens.)
+
+The confusion of argument and index is, if I
+am not mistaken, at the root of Frege's theory
+% -----File: 105.png---
+of the meaning of propositions and functions. For
+Frege the propositions of logic were names and
+their arguments the indices of these names.}
+
+
+\PropositionE{5.1}
+{The truth-functions can be ordered in
+series.
+
+That is the foundation of the theory of probability.}
+\enlargethispage{-9pt} % force the next proposition to the next page
+
+\PropositionE{5.101}
+{The truth-functions of every number of elementary
+propositions can be written in a schema of
+the following kind:
+
+\begin{table*}[!h]
+\footnotesize\noindent\centering
+\begin{tabular}{@{}c@{~}l@{~}l@{}}
+(TTTT)($p, q$) & Tautology & (if $p$ then $p$, and if $q$ then $q$) [$p \Implies p \DotOp q \Implies q$]\\
+(FTTT)($p, q$) & in words: & Not both $p$ and $q$. [$\Not{(p \DotOp q)}$]\\
+(TFTT)($p, q$) & \DittoInWords & If $q$ then $p$. [$q \Implies p$]\\
+(TTFT)($p, q$) & \DittoInWords & If $p$ then $q$. [$p \Implies q$]\\
+(TTTF)($p, q$) & \DittoInWords & $p$ or $q$. [$p \lor q$]\\
+(FFTT)($p, q$) & \DittoInWords & Not $q$. [$\Not{q}$]\\
+(FTFT)($p, q$) & \DittoInWords & Not $p$. [$\Not{p}$]\\
+(FTTF)($p, q$) & \DittoInWords & $p$ or $q$, but not both. [$p \DotOp \Not{q} : \lor : q \DotOp \Not{p}$]\\
+(TFFT)($p, q$) & \DittoInWords & If $p$, then $q$; and if $q$, then $p$. [$p \equiv q$]\\
+(TFTF)($p, q$) & \DittoInWords & $p$\\
+(TTFF)($p, q$) & \DittoInWords & $q$\\
+(FFFT)($p, q$) & \DittoInWords & Neither $p$ nor $q$. [$\Not{p} \DotOp \Not{q}$ or $p \BarOp q$]\\
+(FFTF)($p, q$) & \DittoInWords & $p$ and not $q$. [$p \DotOp \Not{q}$]\\
+(FTFF)($p, q$) & \DittoInWords & $q$ and not $p$. [$q \DotOp \Not{p}$]\\
+(TFFF)($p, q$) & \DittoInWords & $p$ and $q$. [$p \DotOp q$]\\
+(FFFF)($p, q$) & Contradiction & ($p$ and not $p$; and $q$ and not $q$.) [$p \DotOp \Not{p} \DotOp q \DotOp \Not{q}$]\\
+\end{tabular}
+\end{table*}
+
+Those truth-possibilities of its truth-arguments,
+which verify the proposition, I shall call its \emph{truth-grounds}.}
+
+
+\PropositionE{5.11}
+{If the truth-grounds which are common to a
+number of propositions are all also truth-grounds
+of some one proposition, we say that the truth of
+this proposition follows from the truth of those
+propositions.}
+
+
+\PropositionE{5.12}
+{In particular the truth of a proposition $p$ follows
+from that of a proposition $q$, if all the truth-grounds
+of the second are truth-grounds of the
+first.}
+% -----File: 107.png---
+
+
+\PropositionE{5.121}
+{The truth-grounds of $q$ are contained in those
+of $p$; $p$ follows from $q$.}
+
+
+\PropositionE{5.122}
+{If $p$ follows from $q$, the sense of ``$p$'' is contained
+in that of ``$q$''.}
+
+
+\PropositionE{5.123}
+{If a god creates a world in which certain propositions
+are true, he creates thereby also a world
+in which all propositions consequent on them are
+true. And similarly he could not create a world
+in which the proposition ``$p$'' is true without
+creating all its objects.}
+
+
+\PropositionE{5.124}
+{A proposition asserts every proposition which
+follows from it.}
+
+
+\PropositionE{5.1241}
+{``$p \DotOp q$'' is one of the propositions which assert
+``$p$'' and at the same time one of the propositions
+which assert ``$q$''.
+
+Two propositions are opposed to one another
+if there is no significant proposition which asserts
+them both.
+
+Every proposition which contradicts another,
+denies it.}
+
+
+\PropositionE{5.13}
+{That the truth of one proposition follows from
+the truth of other propositions, we perceive from
+the structure of the propositions.}
+
+
+\PropositionE{5.131}
+{If the truth of one proposition follows from the
+truth of others, this expresses itself in relations in
+which the forms of these propositions stand to one
+another, and we do not need to put them in these
+relations first by connecting them with one another
+in a proposition; for these relations are internal,
+and exist as soon as, and by the very fact that,
+the propositions exist.}
+
+
+\PropositionE{5.1311}
+{When we conclude from $p \lor q$ and $\Not{p}$ to $q$ the
+relation between the forms of the propositions
+``$p \lor q$'' and ``$\Not{p}$'' is here concealed by the method
+of symbolizing. But if we write, \exempliGratia\ instead of
+``$p \lor q$'' ``$p \BarOp q \DotOp \BarOp \DotOp p \BarOp q$'' and instead of ``$\Not{p}$''
+``$p \BarOp p$'' ($p \BarOp q$ = neither $p$ nor $q$), then the inner
+connexion becomes obvious.
+% -----File: 109.png---
+
+(The fact that we can infer $fa$ from $(x) \DotOp fx$ shows
+that generality is present also in the symbol
+``$(x) \DotOp fx$''.}
+
+
+\PropositionE{5.132}
+{If $p$ follows from $q$, I can conclude from $q$ to $p$;
+infer $p$ from $q$.
+
+The method of inference is to be understood
+from the two propositions alone.
+
+Only they themselves can justify the inference.
+
+Laws of inference, which---as in Frege and
+Russell---are to justify the conclusions, are senseless
+and would be superfluous.}
+
+
+\PropositionE{5.133}
+{All inference takes place a priori.}
+
+
+\PropositionE{5.134}
+{From an elementary proposition no other can
+be inferred.}
+
+
+\PropositionE{5.135}
+{In no way can an inference be made from the
+existence of one state of affairs to the existence of
+another entirely different from it.}
+
+
+\PropositionE{5.136}
+{There is no causal nexus which justifies such
+an inference.}
+
+
+\PropositionE{5.1361}
+{The events of the future \emph{cannot} be inferred from
+those of the present.
+
+Superstition is the belief in the causal
+nexus.}
+
+
+\PropositionE{5.1362}
+{The freedom of the will consists in the fact that
+future actions cannot be known now. We could
+only know them if causality were an \emph{inner} necessity,
+like that of logical deduction.---The connexion
+of knowledge and what is known is that of logical
+necessity.
+
+(``A knows that $p$ is the case'' is senseless if $p$
+is a tautology.)}
+
+
+\PropositionE{5.1363}
+{If from the fact that a proposition is obvious
+to us it does not \emph{follow} that it is true, then obviousness
+is no justification for our belief in its truth.}
+
+
+\PropositionE{5.14}
+{If a proposition follows from another, then the
+latter says more than the former, the former less
+than the latter.}
+% -----File: 111.png---
+
+
+\PropositionE{5.141}
+{If $p$ follows from $q$ and $q$ from $p$ then they are
+one and the same proposition.}
+
+
+\PropositionE{5.142}
+{A tautology follows from all propositions: it
+says nothing.}
+
+
+\PropositionE{5.143}
+{Contradiction is something shared by propositions,
+which \emph{no} proposition has in common with
+another. Tautology is that which is shared by
+all propositions, which have nothing in common
+with one another.
+
+Contradiction vanishes so to speak outside,
+tautology inside all propositions.
+
+Contradiction is the external limit of the propositions,
+tautology their substanceless centre.}
+
+
+\PropositionE{5.15}
+{If $T_{r}$ is the number of the truth-grounds of the
+proposition ``$r$'', $T_{rs}$ the number of those truth-grounds
+of the proposition ``$s$'' which are at the
+same time truth-grounds of ``$r$'', then we call the
+ratio $T_{rs} : T_{r}$ the measure of the \emph{probability} which
+the proposition ``$r$'' gives to the proposition ``$s$''.}
+
+
+\PropositionE{5.151}
+{Suppose in a schema like that above in No.~\PropERef{5.101}
+$T_{r}$ is the number of the ``T'''s in the proposition
+$r$, $T_{rs}$ the number of those ``T'''s in
+the proposition $s$, which stand in the same columns
+as ``T'''s of the proposition $r$; then the proposition
+$r$ gives to the proposition $s$ the probability
+$T_{rs} : T_{r}$.}
+
+
+\PropositionE{5.1511}
+{There is no special object peculiar to probability
+propositions.}
+
+
+\PropositionE{5.152}
+{Propositions which have no truth-arguments
+in common with one another we call independent.
+\enlargethispage{-3pt} % force next paragraph to the next page
+
+Independent propositions (\exempliGratia\ any two elementary
+propositions) give to one another the probability~$\frac{1}{2}$.
+
+If $p$ follows from $q$, the proposition $q$ gives
+to the proposition $p$ the probability~1. The
+certainty of logical conclusion is a limiting case
+of probability.
+
+(Application to tautology and contradiction.)}
+
+
+\PropositionE{5.153}
+{A proposition is in itself neither probable nor
+% -----File: 113.png---
+improbable. An event occurs or does not occur,
+there is no middle course.}
+
+
+\PropositionE{5.154}
+{In an urn there are equal numbers of white
+and black balls (and no others). I draw one
+ball after another and put them back in the
+urn. Then I can determine by the experiment
+that the numbers of the black and white balls
+which are drawn approximate as the drawing
+continues.
+
+So \emph{this} is not a mathematical fact.
+
+If then, I say, It is equally probable that
+I should draw a white and a black ball, this
+means, All the circumstances known to me (including
+the natural laws hypothetically assumed)
+give to the occurrence of the one event no more
+probability than to the occurrence of the other.
+That is they give---as can easily be understood
+from the above explanations---to each the
+probability~$\frac{1}{2}$.
+
+What I can verify by the experiment is that
+the occurrence of the two events is independent
+of the circumstances with which I have no closer
+acquaintance.}
+
+
+\PropositionE{5.155}
+{The unit of the probability proposition is: The
+circumstances---with which I am not further acquainted---give
+to the occurrence of a definite event
+such and such a degree of probability.}
+
+
+\PropositionE{5.156}
+{Probability is a generalization.
+
+It involves a general description of a propositional
+form. Only in default of certainty do we
+need probability.
+
+If we are not completely acquainted with a fact,
+but know \emph{something} about its form.
+
+(A proposition can, indeed, be an incomplete
+picture of a certain state of affairs, but it is always
+\emph{a} complete picture.)
+% -----File: 115.png---
+
+The probability proposition is, as it were, an
+extract from other propositions.}
+
+
+\PropositionE{5.2}
+{The structures of propositions stand to one
+another in internal relations.}
+
+
+\PropositionE{5.21}
+{We can bring out these internal relations in
+our manner of expression, by presenting a proposition
+as the result of an operation which produces
+it from other propositions (the bases of the
+operation).}
+
+
+\PropositionE{5.22}
+{The operation is the expression of a relation
+between the structures of its result and its
+bases.}
+
+
+\PropositionE{5.23}
+{The operation is that which must happen to a
+proposition in order to make another out of it.}
+
+
+\PropositionE{5.231}
+{And that will naturally depend on their formal
+properties, on the internal similarity of their
+forms.}
+
+
+\PropositionE{5.232}
+{The internal relation which orders a series is
+equivalent to the operation by which one term
+arises from another.}
+
+
+\PropositionE{5.233}
+{The first place in which an operation can occur
+is where a proposition arises from another in a
+logically significant way; \idEst\ where the logical
+construction of the proposition begins.}
+
+
+\PropositionE{5.234}
+{The truth-functions of elementary \DPtypo{proposition}{propositions},
+are results of operations which have the elementary
+propositions as bases. (I call these
+operations, truth-operations.)}
+
+
+\PropositionE{5.2341}
+{The sense of a truth-function of $p$ is a function
+of the sense of $p$.
+
+Denial, logical addition, logical multiplication,
+etc.\ etc., are operations.
+
+(Denial reverses the sense of a proposition.)}
+
+
+\PropositionE{5.24}
+{An operation shows itself in a variable; it shows
+how we can proceed from one form of proposition
+to another.
+
+It gives expression to the difference between
+the forms.
+% -----File: 117.png---
+
+(And that which is common to the bases, and
+the result of an operation, is the bases themselves.)}
+
+
+\PropositionE{5.241}
+{The operation does not characterize a form but
+only the difference between forms.}
+
+
+\PropositionE{5.242}
+{The same operation which makes ``$q$'' from
+``$p$'', makes ``$r$'' from ``$q$'', and so on. This
+can only be expressed by the fact that ``$p$'', ``$q$'',
+``$r$'', etc., are variables which give general expression
+\enlargethispage{10pt} % enlarge to make last line fit
+to certain formal relations.}
+
+
+\PropositionE{5.25}
+{The occurrence of an operation does not characterize
+the sense of a proposition.
+
+For an operation does not assert anything; only
+its result does, and this depends on the bases of
+the operation.
+
+(Operation and function must not be confused
+with one another.)}
+
+
+\PropositionE{5.251}
+{A function cannot be its own argument, but
+the result of an operation can be its own
+basis.}
+
+
+\PropositionE{5.252}
+{Only in this way is the progress from term
+to term in a formal series possible (from type
+to type in the hierarchy of Russell and Whitehead).
+(Russell and Whitehead have not admitted
+the possibility of this progress but have made use
+of it all the same.)}
+
+
+\PropositionE{5.2521}
+{The repeated application of an operation to
+its own result I call its successive application
+(``$O' O' O' a$'' is the result of the threefold successive
+application of ``$O' \xi$'' to ``$a$'').
+
+In a similar sense I speak of the successive
+application of \emph{several} operations to a number of
+propositions.}
+
+
+\PropositionE{5.2522}
+{The general term of the formal series $a, O' a,
+O' O' a$,\;$\fourdots$\ I write thus: ``[$a$, $x$, $O' x$]''. This
+expression in brackets is a variable. The first
+term of the expression is the beginning of the
+% -----File: 119.png---
+formal series, the second the form of an arbitrary
+term $x$ of the series, and the third the form
+of that term of the series which immediately
+follows $x$.}
+
+
+\PropositionE{5.2523}
+{The concept of the successive application of
+an operation is equivalent to the concept ``and
+so on''.}
+
+
+\PropositionE{5.253}
+{One operation can reverse the effect of another.
+Operations can cancel one another.}
+
+
+\PropositionE{5.254}
+{Operations can vanish (\exempliGratia\ denial in ``$\Not{\Not{p}}$''\DPtypo{.}{,}
+$\Not{\Not{p}} = p$).}
+
+
+\PropositionE{5.3}
+{All propositions are results of truth-operations
+on the elementary propositions.
+
+The truth-operation is the way in which a
+truth-function arises from elementary propositions.
+
+According to the nature of truth-operations,
+in the same way as out of elementary propositions
+arise their truth-functions, from truth-func\-tions
+arises a new one. Every truth-operation
+creates from truth-functions of elementary propositions
+another truth-func\-tion of elementary
+propositions, \idEst\ a proposition. The result of
+every truth-operation on the results of truth-op\-er\-a\-tions
+on elementary propositions is also
+the result of \emph{one} truth-operation on elementary
+propositions.
+
+Every proposition is the result of truth-operations
+on elementary propositions.}
+
+
+\PropositionE{5.31}
+{The Schemata No.~\PropERef{4.31} are also significant, if
+``$p$'', ``$q$'', ``$r$'', etc.\ are not elementary propositions.
+
+And it is easy to see that the propositional
+sign in No.~\DPtypo{\PropERef{4.42}}{\PropERef{4.442}} expresses one truth-function of
+elementary propositions even when ``$p$'' and
+``$q$'' are truth-functions of elementary propositions.}
+
+
+\PropositionE{5.32}
+{All truth-functions are results of the successive
+% -----File: 121.png---
+application of a finite number of truth-operations
+to elementary propositions.}
+
+
+\PropositionE{5.4}
+{Here it becomes clear that there are no such
+things as ``logical objects'' or ``logical constants''
+(in the sense of Frege and Russell).}
+
+
+\PropositionE{5.41}
+{For all those results of truth-operations on truth-functions
+are identical, which are one and the same
+truth-function of elementary propositions.}
+
+
+\PropositionE{5.42}
+{That $\lor$, $\Implies$, etc., are not relations in the sense of
+right and left, etc., is obvious.
+
+The possibility of crosswise definition of the
+logical ``primitive signs'' of Frege and Russell
+shows by itself that these are not primitive signs
+and that they signify no relations.
+
+And it is obvious that the ``$\Implies$'' which we define
+by means of ``$\Not{}$'' and ``$\lor$'' is identical with that
+by which we define ``$\lor$'' with the help of ``$\Not{}$'', and
+that this ``$\lor$'' is the same as the first, and
+so on.}
+
+
+\PropositionE{5.43}
+{That from a fact $p$ an infinite number of \emph{others}
+should follow, namely $\Not{\Not{p}}$, $\Not{\Not{\Not{\Not{p}}}}$, etc., is
+indeed hardly to be believed, and it is no less
+wonderful that the infinite number of propositions
+of logic (of mathematics) should follow from half
+a dozen ``primitive propositions''.
+
+But all propositions of logic say the same thing.
+That is, nothing.}
+
+
+\PropositionE{5.44}
+{Truth-functions are not material functions.
+
+If \exempliGratia\ an affirmation can be produced by
+repeated denial, is the denial---in any sense---contained
+in the affirmation?
+
+Does ``$\Not{\Not{p}}$'' deny $\Not{p}$, or does it affirm $p$;
+or both?
+
+The proposition ``$\Not{\Not{p}}$'' does not treat of
+denial as an object, but the possibility of denial is
+already prejudged in affirmation.
+
+And if there was an object called ``$\Not{}$'', then
+% -----File: 123.png---
+``$\Not{\Not{p}}$'' would have to say something other than
+``$p$''. For the one proposition would then treat
+of $\Not{}$, the other would not.}
+
+
+\PropositionE{5.441}
+{This disappearance of the apparent logical
+constants also occurs if ``$\Not{(\exists x) \DotOp \Not{fx}}$'' says the
+same as ``$(x) \DotOp fx$'', or ``$(\exists x) \DotOp fx \DotOp x = a$'' the same
+as ``$fa$''.}
+
+
+\PropositionE{5.442}
+{If a proposition is given to us then the results
+of all truth-operations which have it as their basis
+are given \emph{with} it.}
+
+
+\PropositionE{5.45}
+{If there are logical primitive signs a correct logic
+must make clear their position relative to one
+another and justify their existence. The construction
+of logic \emph{out of} its primitive signs must become
+clear.}
+
+
+\PropositionE{5.451}
+{If logic has primitive ideas these must be
+independent of one another. If a primitive idea
+is introduced it must be introduced in all contexts
+in which it occurs at all. One cannot therefore
+introduce it for \emph{one} context and then again for
+another. For example, if denial is introduced,
+we must understand it in propositions of the form
+``$\Not{p}$'', just as in propositions like ``$\Not{(p \lor q)}$'',
+``$(\exists x) \DotOp \Not{fx}$'' and others. We may not first
+introduce it for one class of cases and then for
+another, for it would then remain doubtful whether
+its meaning in the two cases was the same, and
+there would be no reason to use the same way of
+symbolizing in the two cases.
+
+(In short, what Frege (``Grundgesetze der
+Arithmetik'') has said about the introduction of
+signs by definitions holds, mutatis mutandis, for
+the introduction of primitive signs also.)}
+
+
+\PropositionE{5.452}
+{The introduction of a new expedient in the
+symbolism of logic must always be an event full
+of consequences. No new symbol may be introduced
+in logic in brackets or in the margin---with,
+so to speak, an entirely innocent face.
+% -----File: 125.png---
+
+(Thus in the ``Principia Mathematica'' of
+Russell and Whitehead there occur definitions
+and primitive propositions in words. Why suddenly
+words here? This would need a justification.
+There was none, and can be none for the
+process is actually not allowed.)
+
+But if the introduction of a new expedient has
+proved necessary in one place, we must immediately
+ask: Where is this expedient \emph{always} to be
+used? Its position in logic must be made
+clear.}
+
+
+\PropositionE{5.453}
+{All numbers in logic must be capable of
+justification.
+
+Or rather it must become plain that there are
+no numbers in logic.
+
+There are no pre-eminent numbers.}
+
+
+\PropositionE{5.454}
+{In logic there is no side by side, there can be
+no classification.
+
+In logic there cannot be a more general and a
+more special.}
+
+
+\PropositionE{5.4541}
+{The solution of logical problems must be simple
+for they set the standard of simplicity.
+
+Men have always thought that there must be a
+sphere of questions whose answers---a priori---are
+symmetrical and united into a closed regular
+structure.
+
+A sphere in which the proposition, simplex
+sigillum veri, is valid.}
+
+
+\PropositionE{5.46}
+{When we have rightly introduced the logical
+signs, the sense of all their combinations has been
+already introduced with them: therefore not only
+``$p \lor q$'' but also ``$\Not{(p \lor \Not{q})}$'', etc.\ etc. We should
+then already have introduced the effect of all
+possible combinations of brackets; and it would
+then have become clear that the proper general
+primitive signs are not ``$p \lor q$'', ``$(\exists x) \DotOp fx$'', etc.,
+% -----File: 127.png---
+but the most general form of their combinations.}
+
+
+\PropositionE{5.461}
+{The apparently unimportant fact that the apparent
+relations like \DPtypo{$v$}{$\lor$} and $\Implies$ need brackets---unlike
+real relations is of great importance.
+
+The use of brackets with these apparent primitive
+signs shows that these are not the real
+primitive signs; and nobody of course would
+believe that the brackets have meaning by themselves.}
+
+
+\PropositionE{5.4611}
+{Logical operation signs are punctuations.}
+
+
+\PropositionE{5.47}
+{It is clear that everything which can be said
+\emph{beforehand} about the form of \emph{all} propositions at
+all can be said \emph{on one occasion}.
+
+For all logical operations are already contained
+in the elementary proposition. For ``$fa$'' says
+the same as ``$(\exists x) \DotOp fx \DotOp x = a$''.
+
+Where there is composition, there is argument
+and function, and where these are, all logical
+constants already are.
+
+One could say: the one logical constant is that
+which \emph{all} propositions, according to their nature,
+have in common with one another.
+
+That however is the general form of proposition.}
+
+
+\PropositionE{5.471}
+{The general form of proposition is the essence
+of proposition.}
+
+
+\PropositionE{5.4711}
+{To give the essence of proposition means to
+give the essence of all description, therefore the
+essence of the world.}
+
+
+\PropositionE{5.472}
+{The description of the most general propositional
+form is the description of the one and only
+general primitive sign in logic.}
+
+
+\PropositionE{5.473}
+{Logic must take care of itself.
+
+A \emph{possible} sign must also be able to signify.
+Everything which is possible in logic is also
+permitted. (``Socrates is identical'' means nothing
+% -----File: 129.png---
+because there is no property which is called
+``identical''. The proposition is senseless because
+we have not made some arbitrary determination,
+not because the symbol is in itself unpermissible.)
+
+In a certain sense we cannot make mistakes in
+logic.}
+
+
+\PropositionE{5.4731}
+{Self-evidence, of which Russell has said so
+much, can only be discarded in logic by language
+itself preventing every logical mistake. That
+logic is a priori consists in the fact that we \emph{cannot}
+think illogically.}
+
+
+\PropositionE{5.4732}
+{We cannot give a sign the wrong sense.}
+
+
+\PropositionE{5.47321}
+{Occam's razor is, of course, not an arbitrary rule
+nor one justified by its practical success. It simply
+says that \emph{unnecessary} elements in a symbolism
+mean nothing.
+
+Signs which serve \emph{one} purpose are logically
+equivalent, signs which serve \emph{no} purpose are
+logically meaningless.}
+
+
+\PropositionE{5.4733}
+{Frege says: Every legitimately constructed
+proposition must have a sense; and I say: Every
+possible proposition is legitimately constructed,
+and if it has no sense this can only be because
+we have given no \emph{meaning} to some of its constituent
+parts.
+
+(Even if we believe that we have done
+so.)
+
+Thus ``Socrates is identical'' says nothing,
+because we have given \emph{no} meaning to the word
+``identical'' as \emph{adjective}. For when it occurs as
+the sign of equality it symbolizes in an entirely
+different way---the symbolizing relation is another---therefore
+the symbol is in the two cases entirely
+different; the two symbols have the sign in
+common with one another only by accident.}
+% -----File: 131.png---
+
+
+\PropositionE{5.474}
+{The number of necessary fundamental operations
+depends \emph{only} on our notation.}
+
+
+\PropositionE{5.475}
+{It is only a question of constructing a system
+of signs of a definite number of di\-men\-sions---of
+a definite mathematical multiplicity.}
+
+
+\PropositionE{5.476}
+{It is clear that we are not concerned here with
+a \emph{number of primitive ideas} which must be signified
+but with the expression of a rule.}
+
+
+\PropositionE{5.5}
+{Every truth-function is a result of the successive
+application of the operation \mbox{(--\;--\;--\;--\;--T)}\AllowBreak($\xi, \fourdots$) to
+elementary propositions.
+
+This operation denies all the propositions in
+the right-hand bracket and I call it the negation
+of these propositions.}
+
+
+\PropositionE{5.501}
+{An expression in brackets whose terms are
+propositions I in\-di\-cate---if the order of the terms
+in the bracket is indifferent---by a sign of the form
+``($\overline{\xi}$)''. ``$\xi$'' is a variable whose values are the
+terms of the expression in brackets, and the line
+over the variable indicates that it stands for all
+its values in the bracket.
+
+(Thus if $\xi$ has the 3 values P, Q, R, then
+($\overline{\xi}$) = (P, Q, R).)
+
+The values of the variables must be determined.
+
+{\stretchyspace
+The determination is the description of the propositions
+which the variable stands for.}
+
+How the description of the terms of the expression
+in brackets takes place is unessential.
+
+We may distinguish 3 kinds of description:
+1.~Direct enumeration. In this case we can place
+simply its constant values instead of the variable.
+2.~Giving a function $fx$, whose values for all
+values of $x$ are the propositions to be described.
+3.~Giving a formal law, according to which those
+propositions are constructed. In this case the
+% -----File: 133.png---
+terms of the expression in brackets are all the
+terms of a formal series.}
+
+
+\PropositionE{5.502}
+{Therefore I write instead of \mbox{``(--\;--\;--\;--\;--T)}\AllowBreak($\xi, \fourdots$)'',
+``$N(\overline{\xi})$''.
+
+$N(\overline{\xi})$ is the negation of all the values of the
+propositional variable $\xi$.}
+
+
+\PropositionE{5.503}
+{As it is obviously easy to express how propositions
+can be constructed by means of this operation
+and how propositions are not to be constructed by
+means of it, this must be capable of exact expression.}
+
+
+\PropositionE{5.51}
+{If $\xi$ has only one value, then $N(\overline{\xi}) = \Not{p}$ (not $p$),
+if it has two values then $N(\overline{\xi}) = \Not{p} \DotOp \Not{q}$ (neither
+$p$ nor $q$).}
+
+
+\PropositionE{5.511}
+{How can the all-embracing logic which mirrors
+the world use such special catches and manipulations?
+Only because all these are connected into
+an infinitely fine network, to the great mirror.}
+
+
+\PropositionE{5.512}
+{``$\Not{p}$'' is true if ``$p$'' is false. Therefore in the
+true proposition ``$\Not{p}$'' ``$p$'' is a false proposition.
+How then can the stroke ``$\Not{}$'' bring it into
+agreement with reality?
+
+That which denies in ``$\Not{p}$'' is however not
+``$\Not{}$'', but that which all signs of this notation,
+which deny $p$, have in common.
+
+Hence the common rule according to which
+``$\Not{p}$'', ``$\Not{\Not{\Not{p}}}$'', ``${\Not{p}} \lor {\Not{p}}$'', ``$\Not{p} \DotOp \Not{p}$'',
+etc.\ etc.\ (to infinity) are constructed. And this
+which is common to them all mirrors denial.}
+
+
+\PropositionE{5.513}
+{We could say: What is common to all symbols,
+which assert both $p$ and $q$, is the proposition
+``$p \DotOp q$''. What is common to all symbols, which
+assert either $p$ or $q$, is the proposition ``$p \lor q$''.
+
+And similarly we can say: Two propositions
+are opposed to one another when they have
+nothing in common with one another; and every
+proposition has only one negative, because there
+is only one proposition which lies altogether
+outside it.
+% -----File: 135.png---
+
+Thus even in Russell's notation it is evident
+that ``${q : p} \lor {\Not{p}}$'' says the same as ``$q$''; that
+``$p \lor {\Not{p}}$'' says nothing.}
+
+
+\PropositionE{5.514}
+{If a notation is fixed, there is in it a rule according
+to which all the propositions denying $p$ are
+constructed, a rule according to which all the
+propositions asserting $p$ are constructed, a rule
+according to which all the propositions asserting
+$p$ or $q$ are constructed, and so on. These rules
+are equivalent to the symbols and in them their
+sense is mirrored.}
+
+
+\PropositionE{5.515}
+{It must be recognized in our symbols that what
+is connected by ``$\lor$'', ``$\DotOp$'', etc., must be propositions.
+
+And this is the case, for the symbols ``$p$'' and
+``$q$'' presuppose ``$\lor$'', ``$\Not{}$'', etc. If the sign
+``$p$'' in ``$p \lor q$'' does not stand for a complex sign,
+then by itself it cannot have sense; but then also
+the signs ``$p \lor p$'', ``$p \DotOp p$'', etc.\ which have the
+same sense as ``$p$'' have no sense. If, however,
+``$p \lor p$'' has no sense, then also ``$p \lor q$'' can have
+no sense.}
+
+
+\PropositionE{5.5151}
+{Must the sign of the negative proposition be
+constructed by means of the sign of the positive?
+Why should one not be able to express the
+negative proposition by means of a negative fact?
+(Like: if ``$a$'' does not stand in a certain relation
+to ``$b$'', it could express that $aRb$ is not the case.)
+
+{\stretchyspace
+But here also the negative proposition is indirectly
+constructed with the positive.}
+
+The positive \emph{proposition} must presuppose the
+existence of the negative \emph{proposition} and conversely.}
+
+
+\PropositionE{5.52}
+{If the values of $\xi$ are the total values of a function
+$fx$ for all values of $x$, then $N(\overline{\xi}) = \Not{(\exists x) \DotOp fx}$.}
+
+
+\PropositionE{5.521}
+{I separate the concept \emph{all} from the truth-function.
+
+Frege and Russell have introduced generality
+in connexion with the logical product or the logical
+% -----File: 137.png---
+sum. Then it would be difficult to understand
+the propositions ``$(\exists x) \DotOp fx$'' and ``$(x) \DotOp fx$'' in which
+both ideas lie concealed.}
+
+
+\PropositionE{5.522}
+{That which is peculiar to the ``symbolism of
+generality'' is firstly, that it refers to a logical
+prototype, and secondly, that it makes constants
+prominent.}
+
+
+\PropositionE{5.523}
+{The generality symbol occurs as an argument.}
+
+
+\PropositionE{5.524}
+{If the objects are given, therewith are \emph{all} objects
+also given.
+
+If the elementary propositions are given, then
+therewith \emph{all} elementary propositions are also
+given.}
+
+
+\PropositionE{5.525}
+{It is not correct to render the proposition
+\enlargethispage{9pt} % enlarge to make the last line fit
+``$(\exists x) \DotOp fx$''---as Russell does---in words ``$fx$ is
+\emph{possible}''.
+
+Certainty, possibility or impossibility of a state
+of affairs are not expressed by a proposition but
+by the fact that an expression is a tautology, a
+significant proposition or a contradiction.
+
+That precedent to which one would always
+appeal, must be present in the symbol itself.}
+
+
+\PropositionE{5.526}
+{One can describe the world completely by
+completely generalized propositions, \idEst\ without
+from the outset co-ordinating any name with a
+definite object.
+
+In order then to arrive at the customary way
+of expression we need simply say after an expression
+``there is one and only one $x$, which $\fourdots$'':
+and this $x$ is $a$.}
+
+
+\PropositionE{5.5261}
+{A completely generalized proposition is like
+every other proposition composite. (This is shown
+by the fact that in ``$(\exists x, \phi) \DotOp \phi x$'' we must mention
+``$\phi$'' and ``$x$'' separately. Both stand independently
+in signifying relations to the world
+as in the ungeneralized proposition.)
+% -----File: 139.png---
+
+A characteristic of a composite symbol: it has
+something in common with \emph{other} symbols.}
+
+
+\PropositionE{5.5262}
+{The truth or falsehood of \emph{every} proposition alters
+something in the general structure of the world.
+And the range which is allowed to its structure by
+the totality of elementary propositions is exactly
+that which the completely general propositions
+delimit.
+
+(If an elementary proposition is true, then, at
+any rate, there is one \emph{more} elementary proposition
+true.)}
+
+
+\PropositionE{5.53}
+{Identity of the object I express by identity of
+the sign and not by means of a sign of identity.
+Difference of the objects by difference of the
+signs.}
+
+
+\PropositionE{5.5301}
+{That identity is not a relation between objects is
+obvious. This becomes very clear if, for example,
+one considers the proposition ``$(x) : fx \DotOp \Implies \DotOp x = a$''.
+What this proposition says is simply that \emph{only}
+$a$ satisfies the function $f$, and not that only such
+things satisfy the function $f$ which have a certain
+relation to $a$.
+
+One could of course say that in fact \emph{only}
+$a$ has this relation to $a$, but in order to express
+this we should need the sign of identity itself.}
+
+
+\PropositionE{5.5302}
+{Russell's definition of ``='' won't do; because
+according to it one cannot say that two objects
+have all their properties in common. (Even if
+this proposition is never true, it is nevertheless
+\emph{significant}.)}
+
+
+\PropositionE{5.5303}
+{Roughly speaking: to say of \emph{two} things that
+they are identical is nonsense, and to say of \emph{one}
+thing that it is identical with itself is to say
+nothing.}
+
+
+\PropositionE{5.531}
+{I write therefore not ``$f(a,b) \DotOp a = b$'', but ``$f(a,a)$''
+(or ``$f(b,b)$''). And not ``$f(a,b) \DotOp \Not{a} = b$'', but
+``$f(a,b)$''.}
+
+
+\PropositionE{5.532}
+{And analogously: not ``$(\exists x,y) \DotOp f(x,y) \DotOp x = y$'',
+% -----File: 141.png---
+but ``$(\exists x) \DotOp f(x,x)$''; and not ``$(\exists x,y) \DotOp f(x,y) \DotOp
+\Not{x} = y$'', but ``$(\exists x,y) \DotOp f(x,y)$''.
+
+(Therefore instead of Russell's ``$(\exists x,y) \DotOp f(x,y)$'':
+``$(\exists x,y) \DotOp f(x,y) \DotOp \lor \DotOp (\exists x) \DotOp f(x,x)$''.)}
+
+
+\PropositionE{5.5321}
+{Instead of ``$(x) : fx \Implies x = a$'' we therefore write
+\exempliGratia\ ``$(\exists x) \DotOp fx \DotOp \Implies \DotOp fa : \Not{(\exists x,y) \DotOp fx \DotOp fy}$''.
+
+And the proposition ``\emph{only} one $x$ satisfies $f()$''
+reads: ``$(\exists x) \DotOp fx : \Not{(\exists x,y) \DotOp fx \DotOp fy}$''.}
+
+
+\PropositionE{5.533}
+{The identity sign is therefore not an essential
+constituent of logical notation.}
+
+
+\PropositionE{5.534}
+{And we see that apparent propositions like:
+``$a = a$'', ``$a = b \DotOp b = c \DotOp \Implies a = c$'', ``$(x) \DotOp x = x$'', ``$(\exists x) \DotOp
+x = a$'', etc.\ cannot be written in a correct logical
+notation at all.}
+
+
+\PropositionE{5.535}
+{So all problems disappear which are connected
+with such pseu\-do-prop\-o\-si\-tions.
+
+This is the place to solve all the problems which
+arise through Russell's ``Axiom of Infinity''.
+
+What the axiom of infinity is meant to say
+would be expressed in language by the fact that
+there is an infinite number of names with different
+meanings.}
+
+
+\PropositionE{5.5351}
+{There are certain cases in which one is tempted
+to use expressions of the form ``$a = a$'' or ``$p \Implies p$''
+and of that kind. And indeed this takes place
+when one would like to speak of the archetype
+Proposition, Thing, etc. So Russell in the \BookTitle{Principles
+of Mathematics} has rendered the nonsense ``$p$
+is a proposition'' in symbols by ``$p \Implies p$'' and has
+put it as hypothesis before certain propositions to
+show that their places for arguments could only
+be occupied by propositions.
+
+(It is nonsense to place the hypothesis $p \Implies p$
+before a proposition in order to ensure that its
+arguments have the right form, because the
+hypothesis for a non-proposition as argument
+becomes not false but meaningless, and because
+the proposition itself becomes senseless for arguments
+% -----File: 143.png---
+of the wrong kind, and therefore it survives
+the wrong arguments no better and no worse
+than the senseless hypothesis attached for this
+purpose.)}
+
+
+\PropositionE{5.5352}
+{Similarly it was proposed to express ``There are
+no things'' by ``$\Not{(\exists x) \DotOp x = x}$''. But even if this
+were a proposition---would it not be true if indeed
+``There were things'', but these were not identical
+with themselves?}
+
+
+\PropositionE{5.54}
+{In the general propositional form, propositions
+occur in a proposition only as bases of the truth-operations.}
+
+
+\PropositionE{5.541}
+{At first sight it appears as if there were also a
+different way in which one proposition could occur
+in another.
+
+Especially in certain propositional forms of
+psychology, like ``A thinks, that $p$ is the case'',
+or ``A thinks $p$'', etc.
+
+Here it appears superficially as if the proposition
+$p$ stood to the object A in a kind of relation.
+
+(And in modern \DPtypo{epistomology}{epistemology} (Russell, Moore,
+etc.) those propositions have been conceived in
+this way.)}
+
+
+\PropositionE{5.542}
+{But it is clear that ``A believes that $p$'', ``A
+thinks $p$'', ``A says $p$'', are of the form ```$p$' says
+$p$'': and here we have no co-ordination of a fact
+and an object, but a co-ordination of facts by
+means of a co-ordination of their objects.}
+
+
+\PropositionE{5.5421}
+{This shows that there is no such thing as the
+soul---the subject, etc.---as it is conceived in contemporary
+superficial psychology.
+
+A composite soul would not be a soul any
+longer.}
+
+
+\PropositionE{5.5422}
+{The correct explanation of the form of the
+proposition ``A judges $p$'' must show that it is
+impossible to judge a nonsense. (Russell's theory
+does not satisfy this condition.)}
+
+
+\PropositionE{5.5423}
+{To perceive a complex means to perceive that
+% -----File: 145.png---
+its constituents are combined in such and such a
+way.
+
+This perhaps explains that the figure
+\Illustration{cube}
+can be seen in two ways as a cube; and all similar
+phenomena. For we really see two different facts.
+
+(If I fix my eyes first on the corners $a$ and only
+glance at $b$, $a$ appears in front and $b$ behind, and
+vice versa.)}
+
+
+\PropositionE{5.55}
+{We must now answer a priori the question
+as to all possible forms of the elementary propositions.
+
+The elementary proposition consists of names.
+Since we cannot give the number of names with
+different meanings, we cannot give the composition
+of the elementary proposition.}
+
+
+\PropositionE{5.551}
+{Our fundamental principle is that every question
+which can be decided at all by logic can be decided
+without further trouble.
+
+(And if we get into a situation where we need
+to answer such a problem by looking at the world,
+this shows that we are on a fundamentally wrong
+track.)}
+
+
+\PropositionE{5.552}
+{The ``experience'' which we need to understand
+logic is not that such and such is the
+case, but that something \emph{is}; but that is \emph{no} experience.
+
+Logic \emph{precedes} every experience---that something
+is \emph{so}.
+
+It is before the How, not before the What.}
+% -----File: 147.png---
+
+
+\PropositionE{5.5521}
+{And if this were not the case, how could
+we apply logic? We could say: if there
+were a logic, even if there were no world,
+how then could there be a logic, since there is a
+world?}
+
+
+\PropositionE{5.553}
+{Russell said that there were simple relations
+between different numbers of things (individuals).
+But between what numbers? And how should
+this be decided---by experience?
+
+(There is no pre-eminent number.)}
+
+
+\PropositionE{5.554}
+{The enumeration of any special forms would
+be entirely arbitrary.}
+
+
+\PropositionE{5.5541}
+{It should be possible to decide a priori whether,
+for example, I can get into a situation in which
+I need to symbolize with a sign of a 27-termed
+relation.}
+
+
+\PropositionE{5.5542}
+{May we then ask this at all? Can we set out
+a sign form and not know whether anything can
+correspond to it?
+
+Has the question sense: what must \emph{be} in order
+that something can be the case?}
+
+
+\PropositionE{5.555}
+{It is clear that we have a concept of the
+elementary proposition apart from its special
+logical form.
+
+Where, however, we can build symbols
+according to a system, there this system is the
+logically important thing and not the single
+symbols.
+
+And how would it be possible that I should
+have to deal with forms in logic which I can
+invent: but I must have to deal with that which
+makes it possible for me to invent them.}
+
+
+\PropositionE{5.556}
+{There cannot be a hierarchy of the forms of the
+elementary propositions. Only that which we
+ourselves construct can we foresee.}
+
+
+\PropositionE{5.5561}
+{Empirical reality is limited by the totality of
+objects. The boundary appears again in the
+totality of elementary propositions.
+% -----File: 149.png---
+
+The hierarchies are and must be independent
+of reality.}
+
+
+\PropositionE{5.5562}
+{If we know on purely logical grounds, that
+there must be elementary propositions, then this
+must be known by everyone who understands the
+propositions in their unanalysed form.}
+
+
+\PropositionE{5.5563}
+{All propositions of our colloquial language are
+actually, just as they are, logically completely in
+order. That most simple thing which we ought to
+give here is not a simile of truth but the complete
+truth itself.
+
+(Our problems are not abstract but perhaps the
+most concrete that there are.)}
+
+
+\PropositionE{5.557}
+{The \emph{application} of logic decides what elementary
+propositions there are.
+
+What lies in the application logic cannot
+anticipate.
+
+It is clear that logic may not collide with its
+application.
+
+But logic must have contact with its application.
+
+Therefore logic and its application may not
+overlap one another.}
+
+
+\PropositionE{5.5571}
+{If I cannot give elementary propositions a
+priori then it must lead to obvious nonsense to
+try to give them.}
+
+
+\PropositionE{5.6}
+{\emph{The limits of my language} mean the limits of my
+world.}
+
+
+\PropositionE{5.61}
+{Logic fills the world: the limits of the world
+are also its limits.
+
+We cannot therefore say in logic: This and
+this there is in the world, that there is not.
+
+For that would apparently presuppose that we
+exclude certain possibilities, and this cannot be
+the case since otherwise logic must get outside
+the limits of the world: that is, if it could
+consider these limits from the other side
+also.
+% -----File: 151.png---
+
+What we cannot think, that we cannot think:
+we cannot therefore \emph{say} what we cannot
+think.}
+
+
+\PropositionE{5.62}
+{This remark provides a key to the question, to
+what extent solipsism is a truth.
+
+In fact what solipsism \emph{means}, is quite correct,
+only it cannot be \emph{said}, but it shows itself.
+
+That the world is \emph{my} world, shows itself in the
+fact that the limits of the language (the language
+which only I understand) mean the limits of \emph{my}
+world.}
+
+
+\PropositionE{5.621}
+{The world and life are one.}
+
+
+\PropositionE{5.63}
+{I am my world. (The microcosm.)}
+
+
+\PropositionE{5.631}
+{The thinking, presenting subject; there is no
+such thing.
+
+If I wrote a book ``The world as I found it'',
+I should also have therein to report on my body
+and say which members obey my will and which
+do not, etc. This then would be a method of
+isolating the subject or rather of showing that in
+an important sense there is no subject: that is to
+say, of it alone in this book mention could \emph{not} be
+made.}
+
+
+\PropositionE{5.632}
+{The subject does not belong to the world but
+it is a limit of the world.}
+
+
+\PropositionE{5.633}
+{\emph{Where in} the world is a metaphysical subject to
+be noted?
+
+You say that this case is altogether like that of
+the eye and the field of sight. But you do \emph{not}
+really see the eye.
+
+And from nothing \emph{in the field of sight} can it be
+concluded that it is seen from an eye.}
+
+
+\PropositionE{5.6331}
+{For the field of sight has not a form like this:
+\Illustration{sight-en}
+}
+% -----File: 153.png---
+
+
+\PropositionE{5.634}
+{This is connected with the fact that no part of
+our experience is also a priori.
+
+Everything we see could also be otherwise.
+
+Everything we can describe at all could also be
+otherwise.
+
+There is no order of things a priori.}
+
+
+\PropositionE{5.64}
+{Here we see that solipsism strictly carried out
+coincides with pure realism. The I in solipsism
+shrinks to an extensionless point and there remains
+the reality co-ordinated with it.}
+
+
+\PropositionE{5.641}
+{There is therefore really a sense in which in
+philosophy we can talk of a non-psy\-cho\-log\-i\-cal I.
+
+The I occurs in philosophy through the fact
+that the ``world is my world''.
+
+The philosophical I is not the man, not the
+human body or the human soul of which psychology
+treats, but the metaphysical subject, the
+limit---not a part of the world.}

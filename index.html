@@ -1,22 +1,43 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ludwig Wittgenstein - Tractatus Logico-Philosophicus</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
 
-<head>
-  <title>Ludwig Wittgenstein - Tractatus Logico-Philosophicus</title>
-  <link href="dist/style.css" rel="stylesheet" type="text/css" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;900&display=swap"
-    rel="stylesheet" />
-
-</head>
-
-<body>
-  <header>
-    <h1>Tractatus Logico-Philosophicus (1922)</h1>
-    <h2>by <a href="https://en.wikipedia.org/wiki/Ludwig_Wittgenstein">Ludwig
-        Wittgenstein</a> </h2>
-  </header>
-  <script src="dist/app.js"></script>
-</body>
-
+  <body>
+    <header>
+      <h1 data-i18n="title">Tractatus Logico-Philosophicus (1922)</h1>
+      <h2>
+        <span data-i18n="by">by</span>
+        <a href="https://en.wikipedia.org/wiki/Ludwig_Wittgenstein"
+          >Ludwig Wittgenstein</a
+        >
+      </h2>
+    </header>
+    <canvas id="canvas"></canvas>
+    <div class="controls">
+      <div class="link-control" data-action="language" data-i18n="language">deutsch</div>
+      <div class="link-control" data-action="expand-all">expand all</div>
+      <div class="link-control" data-action="collapse-all">collapse all</div>
+      <div class="link-control" data-action="center">center</div>
+    </div>
+    <div id="unsupported" hidden>
+      <p>
+        This edition is drawn with WebGPU, which your browser doesn’t support
+        yet.
+      </p>
+      <p>Read the <a href="classic/">classic version</a> instead.</p>
+    </div>
+    <div id="loader">
+      <div class="loader-label">Loading</div>
+      <div class="loader-bar"><div class="loader-fill"></div></div>
+    </div>
+    <script src="src/main.ts" type="module"></script>
+  </body>
 </html>
