@@ -7,6 +7,11 @@ const CLICK_TOLERANCE = 6;
 
 export type PointerKind = 'mouse' | 'touch' | 'pen';
 
+/** Safari's proprietary pinch/rotate gesture events */
+const GESTURE_EVENTS = ['gesturestart', 'gesturechange', 'gestureend'];
+
+const preventDefault = (event: Event) => event.preventDefault();
+
 /**
  * Camera controls and taps for mouse, touch and pen (Pointer Events):
  * drag to pan, wheel or two-finger pinch to zoom.
@@ -28,7 +33,6 @@ export class Mouse extends EventEmitter<{
   private moved = false;
   /** Distance between two pinching fingers at the previous move */
   private pinchDistance = 0;
-  private rect!: DOMRect;
   private devicePixelRatio: number = window.devicePixelRatio || 1;
 
   constructor(private canvas: HTMLCanvasElement, private camera: Camera) {
@@ -49,7 +53,6 @@ export class Mouse extends EventEmitter<{
   }
 
   private updateRect = () => {
-    this.rect = this.canvas.getBoundingClientRect();
     this.devicePixelRatio = window.devicePixelRatio || 1;
     this.updateCameraDimensions();
   };
@@ -61,10 +64,19 @@ export class Mouse extends EventEmitter<{
     this.canvas.addEventListener('pointercancel', this.onPointerCancel);
     this.canvas.addEventListener('pointerleave', this.onPointerLeave);
     this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    // The app handles pan and zoom itself: stop the browser's own touch
+    // scrolling and page pinch-zoom (iOS Safari also needs its gesture events
+    // cancelled), otherwise the page zooms and taps land in the wrong place
+    this.canvas.addEventListener('touchstart', preventDefault, { passive: false });
+    this.canvas.addEventListener('touchmove', preventDefault, { passive: false });
+    for (const type of GESTURE_EVENTS) {
+      document.addEventListener(type, preventDefault, { passive: false });
+    }
   }
 
   private getCanvasPosition(event: MouseEvent): Point {
-    const rect = this.rect;
+    // Read fresh: on phones the page can shift without a resize event
+    const rect = this.canvas.getBoundingClientRect();
     return {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top
@@ -179,6 +191,11 @@ export class Mouse extends EventEmitter<{
     this.canvas.removeEventListener('pointercancel', this.onPointerCancel);
     this.canvas.removeEventListener('pointerleave', this.onPointerLeave);
     this.canvas.removeEventListener('wheel', this.onWheel);
+    this.canvas.removeEventListener('touchstart', preventDefault);
+    this.canvas.removeEventListener('touchmove', preventDefault);
+    for (const type of GESTURE_EVENTS) {
+      document.removeEventListener(type, preventDefault);
+    }
     window.removeEventListener('resize', this.updateRect);
   }
 }

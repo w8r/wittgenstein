@@ -8,8 +8,18 @@ html {
 }
 
 body {
+  /* Pinned: nothing scrolls or rubber-bands under the canvas on phones */
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   overscroll-behavior: none;
+}
+
+html,
+body,
+#canvas {
+  /* Gestures are handled by the app, not by the browser */
+  touch-action: none;
 }
 
 #canvas {
