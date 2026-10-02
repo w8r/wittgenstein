@@ -166,11 +166,16 @@ export class Typesetter {
 
     for (const paragraph of splitParagraphs(tokens)) {
       if (paragraph.gapBefore) top += lineHeight * PARAGRAPH_GAP_EM;
-      const runs = paragraph.runs;
-      const items: RichInlineItem[] = runs.map((run) => ({
-        text: run.text,
-        font: cssFont(run, runSize(run, fontSize) * MEASURE_SCALE)
-      }));
+      // One atomic pretext item per word, so lines only break between words
+      const words = splitWords(paragraph.runs);
+      const items: RichInlineItem[] = words.map((word) => {
+        const main = dominantPart(word);
+        return {
+          text: (word.spaceBefore ? ' ' : '') + word.parts.map((p) => p.text).join(''),
+          font: cssFont(main.run, runSize(main.run, fontSize) * MEASURE_SCALE),
+          break: 'never'
+        };
+      });
       const prepared = prepareRichInline(items);
       const measureWidth = maxWidth * MEASURE_SCALE;
 
@@ -182,10 +187,11 @@ export class Typesetter {
         const baseline = -(top + baselineOffset);
         let x = 0;
         for (const fragment of line.fragments) {
-          const run = runs[fragment.itemIndex];
           x += fragment.gapBefore / MEASURE_SCALE;
-          const y = baseline + fontSize * scriptShift(run.script);
-          x = this.placeRun(fragment.text, fontChain(run), x, y, runSize(run, fontSize), glyphs);
+          for (const { run, text } of words[fragment.itemIndex].parts) {
+            const y = baseline + fontSize * scriptShift(run.script);
+            x = this.placeRun(text, fontChain(run), x, y, runSize(run, fontSize), glyphs);
+          }
         }
         width = Math.max(width, x);
         top += lineHeight;
@@ -316,6 +322,46 @@ function splitParagraphs(tokens: Token[]): { runs: Run[]; gapBefore: boolean }[]
   }
   if (current.runs.length) paragraphs.push(current);
   return paragraphs;
+}
+
+/** A word: text between break opportunities, possibly in several styles. */
+interface Word {
+  parts: { run: Run; text: string }[];
+  spaceBefore: boolean;
+}
+
+/**
+ * Splits styled runs into words. Words break at spaces, and after hyphens
+ * and dashes in prose. Non-breaking spaces (inside inline formulas) don't
+ * split words, so formulas stay on one line unless wider than the line.
+ */
+function splitWords(runs: Run[]): Word[] {
+  const words: Word[] = [];
+  let current: Word | null = null;
+  let spaceBefore = false;
+  for (const run of runs) {
+    const pieces = run.math ? run.text.split(/( +)/) : run.text.split(/( +)|(?<=[-–—])/);
+    for (const piece of pieces) {
+      if (!piece) continue;
+      if (piece.startsWith(' ')) {
+        current = null;
+        spaceBefore = true;
+        continue;
+      }
+      if (!current || /[-–—]$/.test(current.parts[current.parts.length - 1].text)) {
+        current = { parts: [], spaceBefore };
+        words.push(current);
+        spaceBefore = false;
+      }
+      current.parts.push({ run, text: piece });
+    }
+  }
+  return words;
+}
+
+/** The part with the most characters, whose font measures the whole word. */
+function dominantPart(word: Word) {
+  return word.parts.reduce((a, b) => (b.text.length > a.text.length ? b : a));
 }
 
 function fontChain(run: Run): FontIndex[] {

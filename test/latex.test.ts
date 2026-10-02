@@ -15,10 +15,17 @@ describe('parseLatex', () => {
   });
 
   it('converts logic notation to Unicode', () => {
-    expect(text('$(\\exists x) : aRx \\DotOp xRb$')).toBe('(∃x) : aRx . xRb');
-    expect(text('$\\Not{(p \\lor q)}$')).toBe('~(p ∨ q)');
-    expect(text('$p \\Implies q$')).toBe('p ⊃ q');
-    expect(text('$p \\equiv q$ and $p \\BarOp q$')).toBe('p ≡ q and p | q');
+    // Inline formulas use non-breaking spaces; shown as '_' here
+    const inline = (source: string) => text(source).replace(/\u00a0/g, '_');
+    expect(inline('$(\\exists x) : aRx \\DotOp xRb$')).toBe('(∃x)_:_aRx_._xRb');
+    expect(inline('$\\Not{(p \\lor q)}$')).toBe('~(p_∨_q)');
+    expect(inline('$p \\Implies q$')).toBe('p_⊃_q');
+    expect(inline('$p \\equiv q$ and $p \\BarOp q$')).toBe('p_≡_q and p_|_q');
+  });
+
+  it('keeps inline formulas unbreakable but lets display math wrap', () => {
+    expect(text('$p \\lor q$')).not.toContain(' ');
+    expect(text('\\[p \\lor q\\]')).toBe('p ∨ q');
   });
 
   it('italicizes math variables and emphasis', () => {
@@ -30,7 +37,7 @@ describe('parseLatex', () => {
     const math = runs('$p \\lor q$');
     expect(math.map((r) => [r.text, r.italic])).toEqual([
       ['p', true],
-      [' ∨ ', false],
+      ['\u00a0∨\u00a0', false],
       ['q', true]
     ]);
   });

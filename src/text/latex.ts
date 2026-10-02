@@ -30,7 +30,15 @@ interface Style {
   italic: boolean;
   script: Script;
   math: boolean;
+  /** Inline `$...$` math: kept on one line where possible */
+  inline?: boolean;
 }
+
+/** Spaces inside inline formulas are non-breaking so formulas don't wrap. */
+const mathSpace = (style: Style) => (style.inline ? '\u00a0' : ' ');
+
+const endsWithSpace = (token: Token | undefined) =>
+  !!token && token.type === 'text' && /[ \u00a0]$/.test(token.text);
 
 /** Commands that expand to a fixed string (valid in text and math mode). */
 const SYMBOLS: Record<string, string> = {
@@ -199,7 +207,7 @@ class Parser {
 
       if (ch === '$' && !style.math) {
         this.pos++;
-        this.parseUntil('$', { ...style, math: true });
+        this.parseUntil('$', { ...style, math: true, inline: true });
         continue;
       }
 
@@ -270,9 +278,8 @@ class Parser {
       // No spaces inside scripts (they would become line break opportunities)
       if (style.script !== 0) return;
       // Collapse runs of math whitespace into one space
-      const last = this.tokens[this.tokens.length - 1];
-      if (!(last && last.type === 'text' && last.text.endsWith(' '))) {
-        this.emit(' ', { ...style, italic: false, script: 0 });
+      if (!endsWithSpace(this.tokens[this.tokens.length - 1])) {
+        this.emit(mathSpace(style), { ...style, italic: false, script: 0 });
       }
     } else {
       // Latin letters are italic in math mode; digits and operators upright
@@ -356,14 +363,14 @@ class Parser {
       this.pos++;
       this.emitBreak('break');
       if (next === '[') {
-        this.parseUntil('\\]', { ...style, math: true });
+        this.parseUntil('\\]', { ...style, math: true, inline: false });
         this.emitBreak('break');
       }
       return;
     }
     if (next === ' ' || next === ',' || next === ';') {
       this.pos++;
-      this.emit(' ', { ...style, italic: false, script: style.script });
+      this.emit(style.math ? mathSpace(style) : ' ', { ...style, italic: false });
       return;
     }
     if (next === '-' || next === '!') {
@@ -390,11 +397,10 @@ class Parser {
       const symbol = SYMBOLS[name];
       const upright = { ...style, italic: false };
       if (style.math && style.script === 0 && BINARY_OPS.has(name)) {
-        const last = this.tokens[this.tokens.length - 1];
-        if (!(last && last.type === 'text' && last.text.endsWith(' '))) {
-          this.emit(' ', upright);
+        if (!endsWithSpace(this.tokens[this.tokens.length - 1])) {
+          this.emit(mathSpace(style), upright);
         }
-        this.emit(symbol + ' ', upright);
+        this.emit(symbol + mathSpace(style), upright);
       } else {
         this.emit(symbol, upright);
       }
@@ -460,7 +466,7 @@ class Parser {
         if (TABLE_ENVS.has(env)) this.readRawArg(); // column spec
         this.emitBreak('break');
         if (MATH_ENVS.has(env) && !style.math) {
-          this.parseUntil(`\\end{${env}}`, { ...style, math: true });
+          this.parseUntil(`\\end{${env}}`, { ...style, math: true, inline: false });
           this.emitBreak('break');
         }
         return;
