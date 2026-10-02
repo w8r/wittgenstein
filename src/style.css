@@ -36,44 +36,6 @@ body,
   font-family: 'Roboto Slab', serif;
 }
 
-.controls {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  text-align: right;
-  text-decoration: underline;
-  cursor: pointer;
-  user-select: none;
-}
-
-/* White halo keeps overlay text readable on top of the tree */
-header,
-.controls {
-  text-shadow:
-    0 0 2px #fff,
-    0 0 4px #fff,
-    0 0 6px #fff,
-    1px 1px 0 #fff,
-    -1px -1px 0 #fff,
-    1px -1px 0 #fff,
-    -1px 1px 0 #fff;
-}
-
-.link-control {
-  padding: 2px 0;
-}
-
-.link-control:hover {
-  text-shadow:
-    0 0 3px #fff,
-    0 0 6px #fff,
-    0 0 10px #fff,
-    2px 2px 0 #fff,
-    -2px -2px 0 #fff,
-    2px -2px 0 #fff,
-    -2px 2px 0 #fff;
-}
-
 #loader {
   position: fixed;
   inset: 0;
@@ -107,14 +69,24 @@ header,
   transition: transform 0.2s ease-out;
 }
 
-a,
-.link-control {
+a {
   transition: color 0.3s linear;
 }
 
-a:hover,
-.link-control:hover {
+a:hover {
   color: #d16666;
+}
+
+/* White halo keeps the title readable on top of the tree */
+header {
+  text-shadow:
+    0 0 2px #fff,
+    0 0 4px #fff,
+    0 0 6px #fff,
+    1px 1px 0 #fff,
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff;
 }
 
 header {
@@ -138,11 +110,6 @@ header h2 a {
   color: black;
 }
 
-/* The language switch sits apart from the tree controls */
-.link-control[data-action='language'] {
-  margin-bottom: 10px;
-}
-
 /* Phones */
 @media (max-width: 600px) {
   header {
@@ -160,17 +127,8 @@ header h2 a {
     font-size: 1em;
   }
 
-  .controls {
-    bottom: max(12px, env(safe-area-inset-bottom));
+  .menu {
     right: 16px;
-    font-size: 14px;
-  }
-}
-
-/* Touch screens: larger tap targets */
-@media (pointer: coarse) {
-  .link-control {
-    padding: 8px 0;
   }
 }
 
@@ -193,4 +151,157 @@ header h2 a {
 
 #unsupported a {
   color: inherit;
+}
+
+/* --- Menu: floating action button (FAB) that opens the controls -------- */
+
+.menu {
+  --menu-bg: rgba(255, 255, 255, 0.86);
+  --menu-ink: #222;
+  --menu-tint: rgba(237, 224, 204, 0.6);
+  position: fixed;
+  right: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  font-family: 'Roboto Slab', serif;
+  font-weight: 300;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menu button {
+  font: inherit;
+  color: var(--menu-ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.menu-toggle,
+.menu-panel {
+  background: var(--menu-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.menu-toggle {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px !important;
+  padding: 0;
+}
+
+/* Three lines that turn into a cross when open */
+.menu-toggle span {
+  position: absolute;
+  left: 14px;
+  width: 16px;
+  height: 1.5px;
+  background: var(--menu-ink);
+  border-radius: 1px;
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+
+.menu-toggle span:nth-child(1) {
+  top: 16px;
+}
+
+.menu-toggle span:nth-child(2) {
+  top: 21.25px;
+}
+
+.menu-toggle span:nth-child(3) {
+  top: 26.5px;
+}
+
+.menu.open .menu-toggle span:nth-child(1) {
+  transform: translateY(5.25px) rotate(45deg);
+}
+
+.menu.open .menu-toggle span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu.open .menu-toggle span:nth-child(3) {
+  transform: translateY(-5.25px) rotate(-45deg);
+}
+
+.menu-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  padding: 6px;
+  border-radius: 16px;
+  transform-origin: bottom right;
+  /* Closed */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px) scale(0.96);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0s linear 0.18s;
+}
+
+.menu.open .menu-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.menu-panel > button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 16px;
+}
+
+.menu button:hover,
+.menu button:focus-visible {
+  background: var(--menu-tint);
+  outline: none;
+}
+
+.menu .menu-toggle:hover,
+.menu .menu-toggle:focus-visible {
+  background: var(--menu-bg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.14);
+}
+
+/* EN | DE segmented switch */
+.menu-language {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.menu-language button {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 10px;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: #888;
+}
+
+.menu-language button[aria-pressed='true'] {
+  color: var(--menu-ink);
+  background: var(--menu-tint);
+  font-weight: 400;
 }

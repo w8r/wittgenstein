@@ -460,6 +460,8 @@ export class Viewer {
 
   private onKeyDown = (event: KeyboardEvent) => {
     if (!this.tree || event.metaKey || event.ctrlKey || event.altKey) return;
+    // Keys on buttons and links (e.g. the menu) are theirs, not the tree's
+    if ((event.target as Element | null)?.closest?.('button, a, input')) return;
     const selected = this.selected;
 
     let handled = true;

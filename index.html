@@ -21,12 +21,26 @@
       </h2>
     </header>
     <canvas id="canvas"></canvas>
-    <div class="controls">
-      <div class="link-control" data-action="language" data-i18n="language">deutsch</div>
-      <div class="link-control" data-action="expand-all">expand all</div>
-      <div class="link-control" data-action="collapse-all">collapse all</div>
-      <div class="link-control" data-action="center">center</div>
-    </div>
+    <nav class="menu" id="menu">
+      <div class="menu-panel" id="menu-panel" role="menu" aria-label="Controls">
+        <button type="button" role="menuitem" data-action="expand-all">expand all</button>
+        <button type="button" role="menuitem" data-action="collapse-all">collapse all</button>
+        <button type="button" role="menuitem" data-action="center">center</button>
+        <div class="menu-language" role="group" aria-label="Language">
+          <button type="button" data-language="en" aria-pressed="true">EN</button>
+          <button type="button" data-language="de" aria-pressed="false">DE</button>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="menu-toggle"
+        aria-label="Menu"
+        aria-expanded="false"
+        aria-controls="menu-panel"
+      >
+        <span></span><span></span><span></span>
+      </button>
+    </nav>
     <div id="unsupported" hidden>
       <p>
         This edition is drawn with WebGPU, which your browser doesn’t support
