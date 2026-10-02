@@ -1,5 +1,7 @@
 import {
+  blockGlyphs,
   DrawNode,
+  Marker,
   NODE_HOVERED,
   NODE_SELECTED,
   nodeGlyphs,
@@ -9,7 +11,7 @@ import {
   serializeText
 } from './buffers';
 import { Camera } from './camera';
-import { forEachNode, layout, typesetTree } from './layout';
+import { forEachNode, layout, removePlaceholders, typesetTree } from './layout';
 import { Mouse } from './mouse';
 import { Renderer } from './renderer/webgpu';
 import { Typesetter } from './text/typesetter';
@@ -25,6 +27,10 @@ const CAMERA_TRANSITION_MS = 650;
  */
 const MAX_FOCUS_ZOOM = 1.0;
 const MIN_FOCUS_ZOOM = 0.6;
+
+/** The "›" marking collapsed propositions */
+const MARKER_FONT_SIZE = 18;
+const MARKER_COLOR = [0.45, 0.45, 0.45, 1] as const;
 
 export interface ViewerOptions {
   /** Loading progress, 0..1, with a short description of the current step */
@@ -61,6 +67,7 @@ export class Viewer {
   private typesetter?: Typesetter;
   private parentOf = new Map<Node, Node>();
   private glyphCache = new Map<Node, Float32Array>();
+  private marker?: Marker;
 
   /** Displayed nodes and their current transitions */
   private transitions = new Map<Node, Transition>();
@@ -117,6 +124,7 @@ export class Viewer {
         return undefined;
       })
     ]);
+    removePlaceholders(tree);
     this.tree = tree;
     this.typesetter = typesetter;
 
@@ -126,10 +134,19 @@ export class Viewer {
       await typesetTree(tree, typesetter, (f) =>
         this.progress(0.1 + 0.4 * f, 'Typesetting propositions')
       );
+      // "›" after collapsed propositions
+      const markerBlock = typesetter.layout(
+        [{ type: 'text', text: '›', italic: false, script: 0, math: false }],
+        MARKER_FONT_SIZE
+      );
       const atlas = await typesetter.buildAtlas((f) =>
         this.progress(0.5 + 0.5 * f, 'Generating glyphs')
       );
       this.renderer?.initTextRendering(atlas);
+      this.marker = {
+        glyphs: blockGlyphs(markerBlock, typesetter, MARKER_COLOR),
+        height: markerBlock.height
+      };
     }
 
     forEachNode(tree, (node) => {
@@ -527,7 +544,7 @@ export class Viewer {
     this.renderer.upload({
       ...serializeNodes(this.drawList),
       ...serializeLinks(this.drawList, this.parentOf),
-      ...serializeText(this.drawList, glyphsOf)
+      ...serializeText(this.drawList, glyphsOf, this.marker)
     });
   }
 

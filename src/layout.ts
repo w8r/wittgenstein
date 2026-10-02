@@ -27,6 +27,25 @@ export function forEachNode(root: Node, fn: (node: Node) => void) {
 }
 
 /**
+ * Removes the placeholder nodes the numbering scheme creates for
+ * propositions that don't exist (e.g. "2.0" as the parent of 2.01, 2.02):
+ * their children are attached to the real parent in their place, keeping
+ * the reading order. Depths are recomputed.
+ */
+export function removePlaceholders(root: Node) {
+  const lift = (children: Node[]): Node[] =>
+    children.flatMap((child) =>
+      child.data ? [child] : lift(child.children || [])
+    );
+  const visit = (node: Node, depth: number) => {
+    node.depth = depth;
+    node.children = lift(node.children || []);
+    for (const child of node.children) visit(child, depth + 1);
+  };
+  visit(root, 0);
+}
+
+/**
  * Typesets every proposition (content and ID). Must run before
  * `typesetter.buildAtlas()` and `layout()`.
  */

@@ -18,6 +18,14 @@ type TreeNode = FlextreeNode<Node>;
 export const NODE_HOVERED = 1;
 export const NODE_SELECTED = 2;
 
+/** Opacity of the warm highlight behind hovered / selected propositions */
+const HOVER_TINT = 0.35;
+const SELECTED_TINT = 0.6;
+
+/** Gap between a collapsed proposition and its "›" marker, in world units */
+const MARKER_GAP = 6;
+const LINK_COLOR = [0.45, 0.45, 0.45, 0.9] as const;
+
 /** A node as currently displayed (possibly mid-animation). */
 export interface DrawNode {
   node: Node;
@@ -61,12 +69,14 @@ export function serializeNodes(nodes: DrawNode[]): {
     nodeData[offset + 4] = node.collapsed && node.children?.length ? 1 : 0;
     nodeData[offset + 5] = state;
 
-    const { r, g, b, a } = getColor(node);
-
-    nodeData[offset + 8] = r;
-    nodeData[offset + 9] = g;
-    nodeData[offset + 10] = b;
-    nodeData[offset + 11] = a * alpha;
+    // No visible box: the typesetting carries the structure. Only hover
+    // and selection get a faint warm tint.
+    const tint =
+      state & NODE_SELECTED ? SELECTED_TINT : state & NODE_HOVERED ? HOVER_TINT : 0;
+    nodeData[offset + 8] = 0.93;
+    nodeData[offset + 9] = 0.88;
+    nodeData[offset + 10] = 0.8;
+    nodeData[offset + 11] = tint * alpha;
   });
 
   return { nodeData, nodeCount: nodes.length };
@@ -84,21 +94,25 @@ export function serializeLinks(
   linkCount: number;
 } {
   const byNode = new Map(nodes.map((d) => [d.node, d]));
-  const links: [DrawNode, DrawNode][] = [];
+  // [sourceX, sourceY, targetX, targetY, alpha]
+  const links: number[][] = [];
   for (const child of nodes) {
     const parent = byNode.get(parentOf.get(child.node)!);
-    if (parent) links.push([parent, child]);
+    if (parent) {
+      // From the middle of the parent's right edge to the middle of the child's left edge
+      links.push([
+        parent.rect.x + parent.rect.width,
+        parent.rect.y + parent.rect.height / 2,
+        child.rect.x,
+        child.rect.y + child.rect.height / 2,
+        child.alpha
+      ]);
+    }
   }
 
   const linkData = new Float32Array(links.length * LINK_STRIDE);
-  links.forEach(([source, target], i) => {
+  links.forEach(([sourceX, sourceY, targetX, targetY, alpha], i) => {
     const offset = i * LINK_STRIDE;
-
-    // From the middle of the parent's right edge to the middle of the child's left edge
-    const sourceX = source.rect.x + source.rect.width;
-    const sourceY = source.rect.y + source.rect.height / 2;
-    const targetX = target.rect.x;
-    const targetY = target.rect.y + target.rect.height / 2;
 
     // Horizontal tangents at both ends
     const midX = (sourceX + targetX) / 2;
@@ -112,54 +126,33 @@ export function serializeLinks(
     linkData[offset + 6] = midX;
     linkData[offset + 7] = targetY;
 
-    linkData[offset + 8] = 0.45; // r
-    linkData[offset + 9] = 0.45; // g
-    linkData[offset + 10] = 0.45; // b
-    linkData[offset + 11] = 0.9 * target.alpha; // a
+    linkData[offset + 8] = LINK_COLOR[0];
+    linkData[offset + 9] = LINK_COLOR[1];
+    linkData[offset + 10] = LINK_COLOR[2];
+    linkData[offset + 11] = LINK_COLOR[3] * alpha;
   });
 
   return { linkData, linkCount: links.length };
 }
 
-function getColor(node: Node) {
-  const level = node.depth || 0;
-  const hue = (level * 30) % 360; // Vary hue based on level
-  // Convert HSL to RGB (simple conversion)
-  const h = hue / 60;
-  const s = 0.7;
-  const l = 0.9;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs((h % 2) - 1));
-  const m = l - c / 2;
-
-  let r, g, b;
-  if (h < 1) {
-    r = c;
-    g = x;
-    b = 0;
-  } else if (h < 2) {
-    r = x;
-    g = c;
-    b = 0;
-  } else if (h < 3) {
-    r = 0;
-    g = c;
-    b = x;
-  } else if (h < 4) {
-    r = 0;
-    g = x;
-    b = c;
-  } else if (h < 5) {
-    r = x;
-    g = 0;
-    b = c;
-  } else {
-    r = c;
-    g = 0;
-    b = x;
+/** Glyph instances of a text block, relative to its top-left corner. */
+export function blockGlyphs(
+  block: TextBlock,
+  typesetter: Typesetter,
+  color: readonly number[]
+): Float32Array {
+  const glyphs: number[] = [];
+  for (const glyph of block.glyphs) {
+    const q = typesetter.quad(glyph, 0, 0);
+    if (q) glyphs.push(q.x, q.y, q.w, q.h, q.u, q.v, q.uw, q.vh, ...color);
   }
+  return new Float32Array(glyphs);
+}
 
-  return { r: r + m, g: g + m, b: b + m, a: 0.5 };
+/** Marker shown after collapsed propositions, centered on their right edge */
+export interface Marker {
+  glyphs: Float32Array;
+  height: number;
 }
 
 /**
@@ -200,25 +193,38 @@ export function nodeGlyphs(node: Node, typesetter: Typesetter): Float32Array {
 /** Serialize the text of displayed nodes from their cached local glyphs. */
 export function serializeText(
   nodes: DrawNode[],
-  glyphsOf: (node: Node) => Float32Array
+  glyphsOf: (node: Node) => Float32Array,
+  marker?: Marker
 ): {
   glyphData: Float32Array<ArrayBuffer>;
   glyphCount: number;
 } {
+  const hasMarker = (node: Node) =>
+    !!marker && !!node.collapsed && node.children?.length > 0;
+
   let length = 0;
-  for (const { node } of nodes) length += glyphsOf(node).length;
+  for (const { node } of nodes) {
+    length += glyphsOf(node).length;
+    if (hasMarker(node)) length += marker!.glyphs.length;
+  }
 
   const glyphData = new Float32Array(length);
   let offset = 0;
-  for (const { node, rect, alpha } of nodes) {
-    const local = glyphsOf(node);
+  const place = (local: Float32Array, x: number, y: number, alpha: number) => {
     glyphData.set(local, offset);
     for (let i = offset; i < offset + local.length; i += TEXT_GLYPH_STRIDE) {
-      glyphData[i] += rect.x;
-      glyphData[i + 1] += rect.y;
+      glyphData[i] += x;
+      glyphData[i + 1] += y;
       glyphData[i + 11] *= alpha;
     }
     offset += local.length;
+  };
+  for (const { node, rect, alpha } of nodes) {
+    place(glyphsOf(node), rect.x, rect.y, alpha);
+    if (hasMarker(node)) {
+      const top = rect.y + rect.height / 2 + marker!.height / 2;
+      place(marker!.glyphs, rect.x + rect.width + MARKER_GAP, top, alpha);
+    }
   }
 
   return { glyphData, glyphCount: length / TEXT_GLYPH_STRIDE };

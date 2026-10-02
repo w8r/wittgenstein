@@ -20,7 +20,7 @@
     "d3": "^5.15.0",
     "d3-flextree": "^2.1.2",
     "htmlparser2": "^4.1.0",
-    "msdfgen-ts": "file:../msdfgen-ts",
+    "msdfgen-ts": "^0.1.0",
     "tex-linebreak2": "0.8.4"
   },
   "prettier": {
