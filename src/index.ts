@@ -49,6 +49,8 @@ const HISTORY_COALESCE_MS = 1000;
 export interface ViewerOptions {
   /** Initial language of the propositions (default: English) */
   language?: Language;
+  /** Called when the browser can't render with WebGPU */
+  onUnsupported?: () => void;
   /** Loading progress, 0..1, with a short description of the current step */
   onProgress?: (fraction: number, label: string) => void;
 }
@@ -130,9 +132,15 @@ export class Viewer {
 
   async init() {
     this.progress(0, 'Loading fonts');
-    if (Renderer.isSupported()) {
+    try {
+      if (!Renderer.isSupported()) throw new Error('WebGPU is not available');
       this.renderer = new Renderer(this.canvas);
       await this.renderer.init(this.camera.getViewProjMatrix());
+    } catch (error) {
+      console.error('Cannot render with WebGPU:', error);
+      this.renderer = undefined;
+      this.options.onUnsupported?.();
+      return;
     }
 
     const [tree, typesetter] = await Promise.all([

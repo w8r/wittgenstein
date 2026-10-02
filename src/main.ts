@@ -41,6 +41,10 @@ const viewer = new Viewer(document.getElementById('canvas') as HTMLCanvasElement
     loaderFill.style.transform = `scaleX(${fraction})`;
     if (label) loaderLabel.textContent = label;
     if (fraction >= 1) loader.classList.add('done');
+  },
+  onUnsupported: () => {
+    loader.classList.add('done');
+    document.getElementById('unsupported')!.hidden = false;
   }
 });
 applyLanguage();

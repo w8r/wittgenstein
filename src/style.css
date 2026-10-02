@@ -163,3 +163,24 @@ header h2 a {
     padding: 8px 0;
   }
 }
+
+#unsupported {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  text-align: center;
+  font-weight: 300;
+  background: #fff;
+}
+
+#unsupported[hidden] {
+  display: none;
+}
+
+#unsupported a {
+  color: inherit;
+}
