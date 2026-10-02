@@ -7,9 +7,18 @@ html {
   font-family: 'Roboto Slab', serif;
 }
 
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 #canvas {
+  display: block;
   width: 100vw;
   height: 100vh;
+  /* Excludes the mobile browser chrome where supported */
+  height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .content,
@@ -122,4 +131,35 @@ header h2 a {
 /* The language switch sits apart from the tree controls */
 .link-control[data-action='language'] {
   margin-bottom: 10px;
+}
+
+/* Phones */
+@media (max-width: 600px) {
+  header {
+    top: 4px;
+    left: 16px;
+    right: 16px;
+  }
+
+  header h1 {
+    font-size: 1.25em;
+    margin: 0.6em 0 0.3em;
+  }
+
+  header h2 {
+    font-size: 1em;
+  }
+
+  .controls {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: 16px;
+    font-size: 14px;
+  }
+}
+
+/* Touch screens: larger tap targets */
+@media (pointer: coarse) {
+  .link-control {
+    padding: 8px 0;
+  }
 }

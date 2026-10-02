@@ -25,6 +25,7 @@ const SELECTED_TINT = 0.6;
 /** Gap between a collapsed proposition and its "›" marker, in world units */
 const MARKER_GAP = 6;
 const LINK_COLOR = [0.45, 0.45, 0.45, 0.9] as const;
+const ROOT_COLOR = [0.3, 0.3, 0.3, 1] as const;
 
 /** A node as currently displayed (possibly mid-animation). */
 export interface DrawNode {
@@ -69,6 +70,12 @@ export function serializeNodes(nodes: DrawNode[]): {
     nodeData[offset + 4] = node.collapsed && node.children?.length ? 1 : 0;
     nodeData[offset + 5] = state;
 
+    if (!node.data) {
+      // The root: a small dot where the seven main propositions branch from
+      nodeData.set(ROOT_COLOR, offset + 8);
+      nodeData[offset + 11] = ROOT_COLOR[3] * alpha;
+      return;
+    }
     // No visible box: the typesetting carries the structure. Only hover
     // and selection get a faint warm tint.
     const tint =

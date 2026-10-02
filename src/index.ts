@@ -18,7 +18,7 @@ import {
   setTreeLanguage,
   typesetTree
 } from './layout';
-import { Mouse } from './mouse';
+import { Mouse, type PointerKind } from './mouse';
 import { Renderer } from './renderer/webgpu';
 import { Typesetter } from './text/typesetter';
 import { Language, Node, Point, Rect } from './types';
@@ -37,6 +37,11 @@ const MIN_FOCUS_ZOOM = 0.6;
 /** The "›" marking collapsed propositions */
 const MARKER_FONT_SIZE = 18;
 const MARKER_COLOR = [0.45, 0.45, 0.45, 1] as const;
+
+/** Width of the clickable "›" zone right of a proposition, in world units */
+const MARKER_ZONE = 28;
+/** Extra hit area around propositions for fingers, in CSS px */
+const TOUCH_SLOP = 10;
 
 /** Selections within this interval share one browser history entry */
 const HISTORY_COALESCE_MS = 1000;
@@ -383,25 +388,38 @@ export class Viewer {
 
   // --- Interaction -----------------------------------------------------------
 
-  private hitTest(point: Point): Node | null {
+  /**
+   * Proposition under a canvas point. `onMarker` is true in the "›" zone to
+   * the right of a proposition with children. `slop` (CSS px) widens the
+   * targets, for fingers.
+   */
+  private hitTest(
+    point: Point,
+    slop = 0
+  ): { node: Node; onMarker: boolean } | null {
     const world = this.camera.screenToWorld(point.x, point.y);
+    const pad = slop * this.camera.zoom;
     for (let i = this.drawList.length - 1; i >= 0; i--) {
       const { node, rect, alpha } = this.drawList[i];
       if (alpha < 0.5 || !node.data) continue;
+      if (world.y < rect.y - pad || world.y > rect.y + rect.height + pad) continue;
+      const right = rect.x + rect.width;
+      if (world.x >= rect.x - pad && world.x <= right) {
+        return { node, onMarker: false };
+      }
       if (
-        world.x >= rect.x &&
-        world.x <= rect.x + rect.width &&
-        world.y >= rect.y &&
-        world.y <= rect.y + rect.height
+        node.children?.length &&
+        world.x > right &&
+        world.x <= right + MARKER_ZONE + pad
       ) {
-        return node;
+        return { node, onMarker: true };
       }
     }
     return null;
   }
 
   private onHover = (point: Point | null) => {
-    const hit = point ? this.hitTest(point) : null;
+    const hit = point ? this.hitTest(point)?.node ?? null : null;
     this.canvas.style.cursor = hit ? 'pointer' : '';
     if (hit === this.hovered) return;
     this.hovered = hit;
@@ -409,14 +427,26 @@ export class Viewer {
     this.requestRedraw();
   };
 
-  private onClick = (point: Point) => {
-    const hit = this.hitTest(point);
+  private onClick = (point: Point, pointer: PointerKind) => {
+    const touch = pointer !== 'mouse';
+    const hit = this.hitTest(point, touch ? TOUCH_SLOP : 0);
     if (!hit) {
       this.select(null);
-    } else if (hit === this.selected) {
-      this.toggle(hit);
+      return;
+    }
+    const { node, onMarker } = hit;
+    if (onMarker || node === this.selected) {
+      // "›" or a second click: collapse/expand
+      if (node !== this.selected) this.selected = node;
+      this.toggle(node);
+      this.updateUrl(node);
+    } else if (touch && node.collapsed && node.children?.length) {
+      // No hover on touch screens: one tap opens a collapsed proposition
+      this.selected = node;
+      this.toggle(node);
+      this.updateUrl(node);
     } else {
-      this.select(hit);
+      this.select(node);
     }
   };
 

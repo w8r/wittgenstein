@@ -6,8 +6,8 @@ export const LAYER_GAP = 80;
 export const SIBLING_GAP = 10;
 export const SUBTREE_GAP = 24;
 
-/** Size of nodes without text (the root) */
-export const EMPTY_NODE_SIZE = 10;
+/** Size of the root dot */
+export const EMPTY_NODE_SIZE = 8;
 
 export const NODE_STRIDE = 12;
 export const LINK_STRIDE = 12;
