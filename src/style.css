@@ -162,14 +162,18 @@ header h2 a {
   position: fixed;
   right: 20px;
   bottom: max(20px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
   font-family: 'Roboto Slab', serif;
   font-weight: 300;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* Only the button and the open panel take touches; the rest of the
+     menu's box must not block the canvas underneath */
+  pointer-events: none;
+}
+
+.menu-toggle,
+.menu.open .menu-panel {
+  pointer-events: auto;
 }
 
 .menu button {
@@ -236,6 +240,10 @@ header h2 a {
 }
 
 .menu-panel {
+  /* Above the button, outside the menu's layout box */
+  position: absolute;
+  right: 0;
+  bottom: 52px;
   display: flex;
   flex-direction: column;
   min-width: 170px;
